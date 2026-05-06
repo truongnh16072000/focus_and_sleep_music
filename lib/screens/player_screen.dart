@@ -1,11 +1,12 @@
-import 'dart:ui';
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../models/session.dart';
 import '../services/audio_service.dart';
-import '../services/timer_service.dart';
+import '../services/focus_session_lock_service.dart';
+import '../services/storage_service.dart';
 
 class PlayerScreen extends StatefulWidget {
   final Session session;
@@ -20,6 +21,12 @@ class _PlayerScreenState extends State<PlayerScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _waveController;
   double _stimulationLevel = 0.5;
+  bool _isFavorited = false;
+  late final VoidCallback _playbackListener;
+  bool _didShowManualGuidedAccessHint = false;
+  final Stopwatch _visibleFocusStopwatch = Stopwatch();
+  Timer? _visibleFocusTimer;
+  Duration _visibleFocusElapsed = Duration.zero;
 
   @override
   void initState() {
@@ -29,83 +36,157 @@ class _PlayerScreenState extends State<PlayerScreen>
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat();
+    _playbackListener = _handlePlaybackChanged;
+    AudioService.instance.isPlaying.addListener(_playbackListener);
+    _handlePlaybackChanged();
+    _checkFavoriteStatus();
+  }
+
+  Future<void> _checkFavoriteStatus() async {
+    final favorites = await StorageService.instance.getSavedTracks();
+    if (mounted) {
+      setState(() {
+        _isFavorited = favorites.any((t) => t.id == widget.session.id);
+      });
+    }
+  }
+
+  Future<void> _toggleFavorite() async {
+    if (_isFavorited) {
+      await StorageService.instance.removeTrack(widget.session.id);
+    } else {
+      await StorageService.instance.saveTrack(
+        Track(
+          id: widget.session.id,
+          title: widget.session.title,
+          description: widget.session.description,
+          genre: widget.session.genre,
+          imageUrl: widget.session.imageUrl,
+          audioUrl: widget.session.audioUrl,
+          assetPath: widget.session.assetPath,
+          isPersonal: widget.session.isPersonal,
+          localPath: widget.session.localPath,
+        ),
+      );
+    }
+    setState(() => _isFavorited = !_isFavorited);
+
+    if (mounted) {
+      final theme = Theme.of(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _isFavorited ? "Added to favorites" : "Removed from favorites",
+            style: TextStyle(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          backgroundColor: theme.colorScheme.surfaceContainerHighest,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          margin: const EdgeInsets.all(16),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   @override
   void dispose() {
+    AudioService.instance.isPlaying.removeListener(_playbackListener);
+    _visibleFocusTimer?.cancel();
+    unawaited(FocusSessionLockService.instance.deactivateForFocusPlayback());
     _waveController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF0F0F12),
-      body: Stack(
-        children: [
-          // Animated Background Wave
-          Positioned.fill(
-            child: AnimatedBuilder(
-              animation: _waveController,
-              builder: (context, child) {
-                return CustomPaint(
-                  painter: SineWavePainter(
-                    phase: _waveController.value * 2 * math.pi,
-                    amplitude: 20 + (_stimulationLevel * 40),
-                    frequency: 0.02 + (_stimulationLevel * 0.03),
-                    color: Colors.white.withOpacity(0.05),
-                  ),
-                );
-              },
-            ),
-          ),
+    final theme = Theme.of(context);
 
-          SafeArea(
-            child: Column(
-              children: [
-                _buildHeader(context),
-                const Spacer(),
-                _buildTrackInfo(),
-                const SizedBox(height: 40),
-                _buildWaveVisualization(),
-                const Spacer(),
-                _buildControls(),
-                const SizedBox(height: 32),
-                _buildSettingsPanel(),
-              ],
+    return PopScope(
+      child: Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        body: Stack(
+          children: [
+            // Animated Background Wave
+            Positioned.fill(
+              child: AnimatedBuilder(
+                animation: _waveController,
+                builder: (context, child) {
+                  return CustomPaint(
+                    painter: SineWavePainter(
+                      phase: _waveController.value * 2 * math.pi,
+                      amplitude: 20 + (_stimulationLevel * 40),
+                      frequency: 0.02 + (_stimulationLevel * 0.03),
+                      color: theme.colorScheme.onSurface.withValues(
+                        alpha: 0.05,
+                      ),
+                    ),
+                  );
+                },
+              ),
             ),
-          ),
-        ],
+
+            SafeArea(
+              child: Column(
+                children: [
+                  _buildHeader(context),
+                  const Spacer(),
+                  _buildTrackInfo(),
+                  const SizedBox(height: 40),
+                  _buildWaveVisualization(),
+                  const Spacer(),
+                  _buildControls(),
+                  const SizedBox(height: 32),
+                  _buildSettingsPanel(),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildHeader(BuildContext context) {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(
-            icon: const Icon(
+            icon: Icon(
               Icons.keyboard_arrow_down,
-              color: Colors.white,
+              color: theme.colorScheme.onSurface,
               size: 32,
             ),
-            onPressed: () => Navigator.pop(context),
+            onPressed: () async {
+              await AudioService.instance.stop();
+              if (context.mounted) Navigator.pop(context);
+            },
           ),
           Text(
             "NeuroFlow",
             style: GoogleFonts.montserrat(
-              color: Colors.white70,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
               fontSize: 14,
               fontWeight: FontWeight.w600,
               letterSpacing: 1.2,
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.more_vert, color: Colors.white70),
-            onPressed: () {},
+            icon: Icon(
+              _isFavorited ? Icons.favorite : Icons.favorite_border,
+              color: _isFavorited
+                  ? Colors.redAccent
+                  : theme.colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
+            onPressed: _toggleFavorite,
           ),
         ],
       ),
@@ -113,6 +194,7 @@ class _PlayerScreenState extends State<PlayerScreen>
   }
 
   Widget _buildTrackInfo() {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 40),
       child: Column(
@@ -121,7 +203,7 @@ class _PlayerScreenState extends State<PlayerScreen>
             widget.session.title,
             textAlign: TextAlign.center,
             style: GoogleFonts.montserrat(
-              color: Colors.white,
+              color: theme.colorScheme.onSurface,
               fontSize: 28,
               fontWeight: FontWeight.bold,
             ),
@@ -130,18 +212,54 @@ class _PlayerScreenState extends State<PlayerScreen>
           Text(
             widget.session.description.toUpperCase(),
             style: GoogleFonts.inter(
-              color: Colors.white.withOpacity(0.5),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
               fontSize: 10,
               fontWeight: FontWeight.bold,
               letterSpacing: 2,
             ),
           ).animate(delay: 200.ms).fadeIn(),
+          const SizedBox(height: 18),
+          _buildFocusCounter(theme).animate(delay: 260.ms).fadeIn(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFocusCounter(ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.onSurface.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.08),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.timer_outlined,
+            size: 16,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.62),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            _formatFocusCounter(_visibleFocusElapsed),
+            style: GoogleFonts.inter(
+              color: theme.colorScheme.onSurface,
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
         ],
       ),
     );
   }
 
   Widget _buildWaveVisualization() {
+    final theme = Theme.of(context);
     return SizedBox(
       height: 200,
       width: double.infinity,
@@ -152,6 +270,7 @@ class _PlayerScreenState extends State<PlayerScreen>
             painter: CentralWavePainter(
               phase: _waveController.value * 2 * math.pi,
               level: _stimulationLevel,
+              color: theme.colorScheme.onSurface,
             ),
           );
         },
@@ -160,6 +279,7 @@ class _PlayerScreenState extends State<PlayerScreen>
   }
 
   Widget _buildControls() {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 40),
       child: Column(
@@ -182,9 +302,10 @@ class _PlayerScreenState extends State<PlayerScreen>
                           thumbShape: const RoundSliderThumbShape(
                             enabledThumbRadius: 6,
                           ),
-                          activeTrackColor: Colors.white,
-                          inactiveTrackColor: Colors.white.withOpacity(0.1),
-                          thumbColor: Colors.white,
+                          activeTrackColor: theme.colorScheme.onSurface,
+                          inactiveTrackColor: theme.colorScheme.onSurface
+                              .withValues(alpha: 0.1),
+                          thumbColor: theme.colorScheme.onSurface,
                         ),
                         child: Slider(
                           value: value.clamp(0.0, 1.0),
@@ -204,14 +325,18 @@ class _PlayerScreenState extends State<PlayerScreen>
                             Text(
                               _formatDuration(position),
                               style: TextStyle(
-                                color: Colors.white.withOpacity(0.4),
+                                color: theme.colorScheme.onSurface.withValues(
+                                  alpha: 0.4,
+                                ),
                                 fontSize: 10,
                               ),
                             ),
                             Text(
                               _formatDuration(duration),
                               style: TextStyle(
-                                color: Colors.white.withOpacity(0.4),
+                                color: theme.colorScheme.onSurface.withValues(
+                                  alpha: 0.4,
+                                ),
                                 fontSize: 10,
                               ),
                             ),
@@ -229,13 +354,9 @@ class _PlayerScreenState extends State<PlayerScreen>
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               IconButton(
-                icon: const Icon(Icons.timer_outlined, color: Colors.white54),
-                onPressed: () => _showTimerOptions(),
-              ),
-              IconButton(
-                icon: const Icon(
+                icon: Icon(
                   Icons.skip_previous,
-                  color: Colors.white,
+                  color: theme.colorScheme.onSurface,
                   size: 36,
                 ),
                 onPressed: () => AudioService.instance.skipToPrevious(),
@@ -248,13 +369,13 @@ class _PlayerScreenState extends State<PlayerScreen>
                     child: Container(
                       width: 72,
                       height: 72,
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.onSurface,
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
                         isPlaying ? Icons.pause : Icons.play_arrow,
-                        color: Colors.black,
+                        color: theme.scaffoldBackgroundColor,
                         size: 40,
                       ),
                     ),
@@ -262,16 +383,12 @@ class _PlayerScreenState extends State<PlayerScreen>
                 },
               ),
               IconButton(
-                icon: const Icon(
+                icon: Icon(
                   Icons.skip_next,
-                  color: Colors.white,
+                  color: theme.colorScheme.onSurface,
                   size: 36,
                 ),
                 onPressed: () => AudioService.instance.skipToNext(),
-              ),
-              IconButton(
-                icon: const Icon(Icons.favorite_border, color: Colors.white54),
-                onPressed: () {},
               ),
             ],
           ),
@@ -281,13 +398,16 @@ class _PlayerScreenState extends State<PlayerScreen>
   }
 
   Widget _buildSettingsPanel() {
+    final theme = Theme.of(context);
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -298,7 +418,7 @@ class _PlayerScreenState extends State<PlayerScreen>
               Text(
                 "NEURAL EFFECT LEVEL",
                 style: GoogleFonts.inter(
-                  color: Colors.white.withOpacity(0.5),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 1.5,
@@ -307,7 +427,7 @@ class _PlayerScreenState extends State<PlayerScreen>
               Text(
                 _getEffectLabel(),
                 style: GoogleFonts.inter(
-                  color: Colors.white,
+                  color: theme.colorScheme.onSurface,
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
                 ),
@@ -318,10 +438,12 @@ class _PlayerScreenState extends State<PlayerScreen>
           SliderTheme(
             data: SliderTheme.of(context).copyWith(
               trackHeight: 4,
-              activeTrackColor: Colors.white,
-              inactiveTrackColor: Colors.white.withOpacity(0.1),
-              thumbColor: Colors.white,
-              overlayColor: Colors.white.withOpacity(0.1),
+              activeTrackColor: theme.colorScheme.onSurface,
+              inactiveTrackColor: theme.colorScheme.onSurface.withValues(
+                alpha: 0.1,
+              ),
+              thumbColor: theme.colorScheme.onSurface,
+              overlayColor: theme.colorScheme.onSurface.withValues(alpha: 0.1),
             ),
             child: Slider(
               value: _stimulationLevel,
@@ -342,56 +464,62 @@ class _PlayerScreenState extends State<PlayerScreen>
     return "HIGH";
   }
 
-  void _showTimerOptions() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF1A1A1E),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-      ),
-      builder: (context) => Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              "Session Timer",
-              style: GoogleFonts.montserrat(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 32),
-            _buildTimerItem(25, "Deep Focus"),
-            _buildTimerItem(45, "Flow Session"),
-            _buildTimerItem(60, "Epic Work"),
-            const SizedBox(height: 16),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text(
-                "Cancel",
-                style: TextStyle(color: Colors.white54),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  void _handlePlaybackChanged() {
+    unawaited(_syncFocusLockWithPlayback());
+    _syncVisibleFocusTimer();
   }
 
-  Widget _buildTimerItem(int minutes, String label) {
-    return ListTile(
-      leading: const Icon(Icons.timer_outlined, color: Colors.white),
-      title: Text(label, style: const TextStyle(color: Colors.white)),
-      trailing: Text(
-        "$minutes min",
-        style: const TextStyle(color: Colors.white54),
+  void _syncVisibleFocusTimer() {
+    if (AudioService.instance.isPlaying.value) {
+      if (!_visibleFocusStopwatch.isRunning) {
+        _visibleFocusStopwatch.start();
+      }
+      _visibleFocusTimer ??= Timer.periodic(const Duration(seconds: 1), (_) {
+        if (!mounted) return;
+        setState(() {
+          _visibleFocusElapsed = _visibleFocusStopwatch.elapsed;
+        });
+      });
+      setState(() {
+        _visibleFocusElapsed = _visibleFocusStopwatch.elapsed;
+      });
+      return;
+    }
+
+    if (_visibleFocusStopwatch.isRunning) {
+      _visibleFocusStopwatch.stop();
+      setState(() {
+        _visibleFocusElapsed = _visibleFocusStopwatch.elapsed;
+      });
+    }
+    _visibleFocusTimer?.cancel();
+    _visibleFocusTimer = null;
+  }
+
+  Future<void> _syncFocusLockWithPlayback() async {
+    final shouldLock = AudioService.instance.isPlaying.value;
+    final applied = shouldLock
+        ? await FocusSessionLockService.instance.activateForFocusPlayback()
+        : await FocusSessionLockService.instance
+              .deactivateForFocusPlayback()
+              .then((_) => true);
+
+    if (!mounted ||
+        !FocusSessionLockService.instance.isEnabled.value ||
+        !shouldLock ||
+        applied ||
+        FocusSessionLockService.instance.isActive.value ||
+        _didShowManualGuidedAccessHint) {
+      return;
+    }
+
+    _didShowManualGuidedAccessHint = true;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          "iOS only lets apps start Single App mode on supervised devices. Triple-click the side button to start Guided Access manually.",
+        ),
       ),
-      onTap: () {
-        TimerService.instance.startPomodoro(minutes);
-        Navigator.pop(context);
-      },
     );
   }
 
@@ -400,6 +528,13 @@ class _PlayerScreenState extends State<PlayerScreen>
     String twoDigitMinutes = twoDigits(d.inMinutes.remainder(60));
     String twoDigitSeconds = twoDigits(d.inSeconds.remainder(60));
     return "$twoDigitMinutes:$twoDigitSeconds";
+  }
+
+  String _formatFocusCounter(Duration d) {
+    String twoDigits(int n) => n.toString().padLeft(2, "0");
+    final hours = twoDigits(d.inHours);
+    final seconds = twoDigits(d.inSeconds.remainder(60));
+    return "$hours:$seconds";
   }
 }
 
@@ -453,8 +588,13 @@ class SineWavePainter extends CustomPainter {
 class CentralWavePainter extends CustomPainter {
   final double phase;
   final double level;
+  final Color color;
 
-  CentralWavePainter({required this.phase, required this.level});
+  CentralWavePainter({
+    required this.phase,
+    required this.level,
+    required this.color,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -469,15 +609,15 @@ class CentralWavePainter extends CustomPainter {
       double t = (i / count);
       double radius = 40 + (t * 80) + (10 * math.sin(phase + (t * 5)));
 
-      paint.color = Colors.white.withOpacity(
-        (1.0 - t) * 0.2 * (0.5 + level * 0.5),
+      paint.color = color.withValues(
+        alpha: (1.0 - t) * 0.2 * (0.5 + level * 0.5),
       );
       canvas.drawCircle(center, radius, paint);
     }
 
     // Draw central "neural" lines
     paint.strokeWidth = 1;
-    paint.color = Colors.white.withOpacity(0.6 + (level * 0.4));
+    paint.color = color.withValues(alpha: 0.6 + (level * 0.4));
 
     final path = Path();
     int points = 60;

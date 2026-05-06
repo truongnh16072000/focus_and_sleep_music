@@ -43,7 +43,7 @@ class MonetizationScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(32),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.95),
+                    color: Theme.of(context).colorScheme.surface.withOpacity(0.95),
                     borderRadius: const BorderRadius.vertical(
                       top: Radius.circular(40),
                     ),
@@ -53,12 +53,12 @@ class MonetizationScreen extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: AppTheme.primary.withOpacity(0.1),
+                          color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.star_rounded,
-                          color: AppTheme.primary,
+                          color: Theme.of(context).colorScheme.primary,
                           size: 40,
                         ),
                       ),
@@ -84,9 +84,9 @@ class MonetizationScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 32),
 
-                      _buildFeatureRow("Over 1,000+ specialized tracks"),
-                      _buildFeatureRow("Offline mode for zero distractions"),
-                      _buildFeatureRow("Personalized ADHD boost mode"),
+                      _buildFeatureRow(context, "Over 1,000+ specialized tracks"),
+                      _buildFeatureRow(context, "Offline mode for zero distractions"),
+                      _buildFeatureRow(context, "Personalized ADHD boost mode"),
 
                       const SizedBox(height: 40),
 
@@ -96,7 +96,7 @@ class MonetizationScreen extends StatelessWidget {
                         child: ElevatedButton(
                           onPressed: () {},
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primary,
+                            backgroundColor: Theme.of(context).colorScheme.primary,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(20),
                             ),
@@ -130,12 +130,13 @@ class MonetizationScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildFeatureRow(String text) {
+  Widget _buildFeatureRow(BuildContext context, String text) {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
         children: [
-          const Icon(Icons.check_circle, color: AppTheme.primary, size: 20),
+          Icon(Icons.check_circle, color: theme.colorScheme.primary, size: 20),
           const SizedBox(width: 12),
           Text(
             text,

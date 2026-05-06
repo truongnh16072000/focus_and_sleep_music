@@ -5,33 +5,88 @@ import '../models/session.dart';
 class Track {
   final String id;
   final String title;
+  final String description;
   final String genre;
   final String imageUrl;
   final String audioUrl;
+  final String? assetPath;
+  final bool isPersonal;
+  final String? localPath;
 
   Track({
     required this.id,
     required this.title,
+    this.description = '',
     required this.genre,
     required this.imageUrl,
     this.audioUrl = '',
+    this.assetPath,
+    this.isPersonal = false,
+    this.localPath,
   });
 
   Map<String, dynamic> toJson() => {
     'id': id,
     'title': title,
+    'description': description,
     'genre': genre,
     'imageUrl': imageUrl,
     'audioUrl': audioUrl,
+    'assetPath': assetPath,
+    'isPersonal': isPersonal,
+    'localPath': localPath,
   };
 
   factory Track.fromJson(Map<String, dynamic> json) => Track(
     id: json['id'] as String? ?? '',
     title: json['title'] as String? ?? '',
+    description: json['description'] as String? ?? '',
     genre: json['genre'] as String? ?? '',
     imageUrl: json['imageUrl'] as String? ?? '',
     audioUrl: json['audioUrl'] as String? ?? '',
+    assetPath: json['assetPath'] as String?,
+    isPersonal: json['isPersonal'] as bool? ?? false,
+    localPath: json['localPath'] as String?,
   );
+}
+
+class FocusSessionRecord {
+  final String id;
+  final DateTime startedAt;
+  final int minutes;
+  final String sessionId;
+  final String title;
+  final String genre;
+
+  FocusSessionRecord({
+    required this.id,
+    required this.startedAt,
+    required this.minutes,
+    required this.sessionId,
+    required this.title,
+    required this.genre,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'startedAt': startedAt.toIso8601String(),
+    'minutes': minutes,
+    'sessionId': sessionId,
+    'title': title,
+    'genre': genre,
+  };
+
+  factory FocusSessionRecord.fromJson(Map<String, dynamic> json) =>
+      FocusSessionRecord(
+        id: json['id'] as String? ?? '',
+        startedAt:
+            DateTime.tryParse(json['startedAt'] as String? ?? '') ??
+            DateTime.now(),
+        minutes: json['minutes'] as int? ?? 0,
+        sessionId: json['sessionId'] as String? ?? '',
+        title: json['title'] as String? ?? 'Focus session',
+        genre: json['genre'] as String? ?? 'Focus',
+      );
 }
 
 class StorageService {
@@ -47,6 +102,8 @@ class StorageService {
   static const String _streakCountKey = 'streak_count';
   static const String _lastSessionDateKey = 'last_session_date';
   static const String _totalSessionsKey = 'total_sessions';
+  static const String _focusSessionRecordsKey = 'focus_session_records';
+  static const String _focusScreenLockEnabledKey = 'focus_screen_lock_enabled';
 
   SharedPreferences? _prefs;
 
@@ -140,33 +197,105 @@ class StorageService {
     return _safePrefs.getInt(_totalSessionsKey) ?? 0;
   }
 
+  Future<bool> saveFocusSessionRecord({
+    required Duration duration,
+    Session? session,
+    DateTime? startedAt,
+  }) async {
+    if (duration.inSeconds < 60) return false;
+
+    List<String> records =
+        _safePrefs.getStringList(_focusSessionRecordsKey) ?? [];
+    final now = DateTime.now();
+    final minutes = (duration.inSeconds / 60).round().clamp(1, 1440).toInt();
+    final record = FocusSessionRecord(
+      id: 'focus_${now.microsecondsSinceEpoch}',
+      startedAt: startedAt ?? now,
+      minutes: minutes,
+      sessionId: session?.id ?? '',
+      title: session?.title ?? 'Focus session',
+      genre: session?.genre ?? 'Focus',
+    );
+
+    records.insert(0, jsonEncode(record.toJson()));
+    if (records.length > 180) {
+      records = records.sublist(0, 180);
+    }
+
+    await _safePrefs.setStringList(_focusSessionRecordsKey, records);
+    return true;
+  }
+
+  Future<List<FocusSessionRecord>> getFocusSessionRecords() async {
+    final records = _safePrefs.getStringList(_focusSessionRecordsKey) ?? [];
+    return records
+        .map((record) => FocusSessionRecord.fromJson(jsonDecode(record)))
+        .toList();
+  }
+
+  bool isFocusScreenLockEnabled() {
+    return _safePrefs.getBool(_focusScreenLockEnabledKey) ?? false;
+  }
+
+  Future<void> setFocusScreenLockEnabled(bool enabled) async {
+    await _safePrefs.setBool(_focusScreenLockEnabledKey, enabled);
+  }
+
   Future<void> _updateStreak() async {
     final today = DateTime.now();
-    final todayStr = '${today.year}-${today.month}-${today.day}';
+    final todayDate = DateTime(today.year, today.month, today.day);
+    final todayStr = _dateKey(todayDate);
     final lastDate = _safePrefs.getString(_lastSessionDateKey);
 
     int currentStreak = _safePrefs.getInt(_streakCountKey) ?? 0;
     int totalSessions = _safePrefs.getInt(_totalSessionsKey) ?? 0;
+    totalSessions++;
 
     if (lastDate == null) {
       currentStreak = 1;
     } else {
-      final lastDateParsed = DateTime.parse(lastDate);
-      final difference = today.difference(lastDateParsed).inDays;
+      final lastDateParsed = _parseDateKey(lastDate);
+      final difference = lastDateParsed == null
+          ? null
+          : todayDate.difference(lastDateParsed).inDays;
 
-      if (difference == 0) {
-        // Same day, streak continues
+      if (difference == null) {
+        currentStreak = 1;
+      } else if (difference == 0) {
+        await _safePrefs.setInt(_totalSessionsKey, totalSessions);
+        return;
       } else if (difference == 1) {
-        // Consecutive day, increment streak
         currentStreak++;
       } else {
-        // Gap in streak, reset
         currentStreak = 1;
       }
     }
 
     await _safePrefs.setString(_lastSessionDateKey, todayStr);
     await _safePrefs.setInt(_streakCountKey, currentStreak);
-    await _safePrefs.setInt(_totalSessionsKey, totalSessions + 1);
+    await _safePrefs.setInt(_totalSessionsKey, totalSessions);
+  }
+
+  String _dateKey(DateTime date) {
+    final month = date.month.toString().padLeft(2, '0');
+    final day = date.day.toString().padLeft(2, '0');
+    return '${date.year}-$month-$day';
+  }
+
+  DateTime? _parseDateKey(String value) {
+    final parsed = DateTime.tryParse(value);
+    if (parsed != null) {
+      return DateTime(parsed.year, parsed.month, parsed.day);
+    }
+
+    final parts = value.split('-');
+    if (parts.length != 3) return null;
+
+    final year = int.tryParse(parts[0]);
+    final month = int.tryParse(parts[1]);
+    final day = int.tryParse(parts[2]);
+    if (year == null || month == null || day == null) return null;
+
+    return DateTime(year, month, day);
   }
 }

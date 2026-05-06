@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../theme/app_theme.dart';
 import '../services/theme_service.dart';
+import '../services/focus_session_lock_service.dart';
 import 'monetization_screen.dart';
 
 class AccountScreen extends StatefulWidget {
@@ -13,23 +13,8 @@ class AccountScreen extends StatefulWidget {
 
 class _AccountScreenState extends State<AccountScreen> {
   @override
-  void initState() {
-    super.initState();
-    ThemeService.instance.addListener(_onThemeChanged);
-  }
-
-  @override
-  void dispose() {
-    ThemeService.instance.removeListener(_onThemeChanged);
-    super.dispose();
-  }
-
-  void _onThemeChanged() {
-    setState(() {});
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 48,
@@ -48,11 +33,11 @@ class _AccountScreenState extends State<AccountScreen> {
             // Profile Header
             CircleAvatar(
               radius: 50,
-              backgroundColor: AppTheme.primary,
+              backgroundColor: theme.colorScheme.primary,
               child: Text(
                 "D",
-                style: const TextStyle(
-                  color: Colors.black,
+                style: TextStyle(
+                  color: theme.colorScheme.onPrimary,
                   fontSize: 40,
                   fontWeight: FontWeight.bold,
                 ),
@@ -70,7 +55,7 @@ class _AccountScreenState extends State<AccountScreen> {
             Text(
               "Premium Member",
               style: TextStyle(
-                color: AppTheme.primary,
+                color: theme.colorScheme.primary,
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
               ),
@@ -98,6 +83,7 @@ class _AccountScreenState extends State<AccountScreen> {
 
             _buildSettingsGroup(context, "App Settings", [
               _buildThemeToggleTile(context),
+              _buildFocusScreenLockTile(context),
               _buildSettingTile(
                 context,
                 Icons.psychology_outlined,
@@ -144,20 +130,24 @@ class _AccountScreenState extends State<AccountScreen> {
   }
 
   Widget _buildUpgradeCard(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF1A1A2E), Color(0xFF4B3832)],
+        gradient: LinearGradient(
+          colors: [
+            theme.colorScheme.primary.withValues(alpha: 0.9),
+            theme.colorScheme.secondary.withValues(alpha: 0.8),
+          ],
         ),
         borderRadius: BorderRadius.circular(32),
       ),
       child: Column(
         children: [
-          const Text(
+          Text(
             "NeuroFlow Pro",
             style: TextStyle(
-              color: Colors.white,
+              color: theme.colorScheme.onPrimary,
               fontWeight: FontWeight.bold,
               fontSize: 20,
             ),
@@ -167,7 +157,7 @@ class _AccountScreenState extends State<AccountScreen> {
             "Your subscription is active until Oct 2026.",
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.7),
+              color: theme.colorScheme.onPrimary.withValues(alpha: 0.7),
               fontSize: 13,
             ),
           ),
@@ -184,8 +174,8 @@ class _AccountScreenState extends State<AccountScreen> {
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primary,
-                foregroundColor: Colors.black,
+                backgroundColor: theme.colorScheme.primary,
+                foregroundColor: theme.colorScheme.onPrimary,
               ),
               child: const Text("MANAGE SUBSCRIPTION"),
             ),
@@ -200,7 +190,8 @@ class _AccountScreenState extends State<AccountScreen> {
     String title,
     List<Widget> children,
   ) {
-    final surfaceColor = Theme.of(context).colorScheme.surface;
+    final theme = Theme.of(context);
+    final surfaceColor = theme.colorScheme.surface;
     final isDark = ThemeService.instance.isDarkMode;
     final borderOpacity = isDark ? 0.1 : 0.04;
 
@@ -215,7 +206,9 @@ class _AccountScreenState extends State<AccountScreen> {
               fontSize: 10,
               fontWeight: FontWeight.bold,
               letterSpacing: 1.2,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
         ),
@@ -226,7 +219,7 @@ class _AccountScreenState extends State<AccountScreen> {
             border: Border.all(
               color: Theme.of(
                 context,
-              ).colorScheme.onSurface.withOpacity(borderOpacity),
+              ).colorScheme.onSurface.withValues(alpha: borderOpacity),
             ),
           ),
           child: Column(children: children),
@@ -236,14 +229,15 @@ class _AccountScreenState extends State<AccountScreen> {
   }
 
   Widget _buildSettingTile(BuildContext context, IconData icon, String title) {
+    final theme = Theme.of(context);
     return ListTile(
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: AppTheme.primary.withOpacity(0.1),
+          color: theme.colorScheme.primary.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(10),
         ),
-        child: Icon(icon, color: AppTheme.primary, size: 20),
+        child: Icon(icon, color: theme.colorScheme.primary, size: 20),
       ),
       title: Text(
         title,
@@ -256,24 +250,25 @@ class _AccountScreenState extends State<AccountScreen> {
       trailing: Icon(
         Icons.chevron_right,
         size: 20,
-        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
       ),
       onTap: () {},
     );
   }
 
   Widget _buildThemeToggleTile(BuildContext context) {
-    final isDark = ThemeService.instance.isDarkMode;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return ListTile(
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: AppTheme.primary.withOpacity(0.1),
+          color: theme.colorScheme.primary.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Icon(
           isDark ? Icons.dark_mode : Icons.light_mode,
-          color: AppTheme.primary,
+          color: theme.colorScheme.primary,
           size: 20,
         ),
       ),
@@ -288,9 +283,66 @@ class _AccountScreenState extends State<AccountScreen> {
       trailing: Switch(
         value: isDark,
         onChanged: (_) => ThemeService.instance.toggleDarkMode(),
-        activeThumbColor: AppTheme.primary,
+        activeThumbColor: theme.colorScheme.primary,
       ),
       onTap: () => ThemeService.instance.toggleDarkMode(),
+    );
+  }
+
+  Widget _buildFocusScreenLockTile(BuildContext context) {
+    return ValueListenableBuilder<bool>(
+      valueListenable: FocusSessionLockService.instance.isEnabled,
+      builder: (context, enabled, _) {
+        final theme = Theme.of(context);
+        return ListTile(
+          leading: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              enabled ? Icons.lock_outline : Icons.lock_open_outlined,
+              color: theme.colorScheme.primary,
+              size: 20,
+            ),
+          ),
+          title: Text(
+            "Focus Screen Lock",
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          subtitle: Text(
+            "Locks during playback when iOS allows Single App mode.",
+            style: TextStyle(
+              fontSize: 12,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.52),
+            ),
+          ),
+          trailing: Switch(
+            value: enabled,
+            onChanged: (value) => _setFocusScreenLock(context, value),
+            activeThumbColor: theme.colorScheme.primary,
+          ),
+          onTap: () => _setFocusScreenLock(context, !enabled),
+        );
+      },
+    );
+  }
+
+  Future<void> _setFocusScreenLock(BuildContext context, bool enabled) async {
+    final applied = await FocusSessionLockService.instance.setEnabled(enabled);
+    if (!context.mounted || !enabled || applied) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          "iOS only lets apps start Single App mode on supervised devices. On a personal iPhone, triple-click the side button during focus playback.",
+        ),
+      ),
     );
   }
 }

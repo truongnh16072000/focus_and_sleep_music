@@ -14,27 +14,38 @@ class OverviewScreen extends StatefulWidget {
 }
 
 class _OverviewScreenState extends State<OverviewScreen> {
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   List<Session> _recentSessions = [];
+  List<Session> _favoriteSessions = [];
+
+  int _selectedCategoryIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    _loadRecent();
-    AudioService.instance.historyUpdate.addListener(_loadRecent);
+    _loadHomeData();
+    AudioService.instance.historyUpdate.addListener(_loadHomeData);
   }
 
   @override
   void dispose() {
-    AudioService.instance.historyUpdate.removeListener(_loadRecent);
+    AudioService.instance.historyUpdate.removeListener(_loadHomeData);
     super.dispose();
   }
 
-  Future<void> _loadRecent() async {
+  Future<void> _loadHomeData() async {
     final recent = await StorageService().getRecentSessions();
+    final favorites = await StorageService.instance.getSavedTracks();
+    final personalSessions = await StorageService.instance
+        .getPersonalSessions();
+    final favoriteSessions = _resolveFavoriteSessions(
+      favorites,
+      personalSessions,
+    );
+
     if (mounted) {
       setState(() {
         _recentSessions = recent;
+        _favoriteSessions = favoriteSessions;
       });
     }
   }
@@ -44,16 +55,16 @@ class _OverviewScreenState extends State<OverviewScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => PlayerScreen(session: session)),
-    ).then((_) => _loadRecent());
+    ).then((_) => _loadHomeData());
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final categories = SessionData.categories;
 
     return Scaffold(
-      key: _scaffoldKey,
       body: CustomScrollView(
         slivers: [
           _buildSliverAppBar(theme),
@@ -72,7 +83,13 @@ class _OverviewScreenState extends State<OverviewScreen> {
                 const SizedBox(height: 16),
                 _buildActivitiesGrid(theme),
                 const SizedBox(height: 40),
-                _buildSectionTitle(theme, "All Tracks"),
+                if (_favoriteSessions.isNotEmpty) ...[
+                  _buildSectionTitle(theme, "Favorites"),
+                  const SizedBox(height: 12),
+                  _buildFavoritesTray(theme),
+                  const SizedBox(height: 40),
+                ],
+                _buildCategoryTabs(theme),
                 const SizedBox(height: 16),
               ],
             ),
@@ -80,15 +97,70 @@ class _OverviewScreenState extends State<OverviewScreen> {
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             sliver: SliverList(
-              delegate: SliverChildBuilderDelegate((context, index) {
-                final tracks = SessionData.sessions;
-                if (index >= tracks.length) return null;
-                return _buildTrackTile(tracks[index], theme, isDark);
-              }, childCount: SessionData.sessions.length),
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final session =
+                      categories[_selectedCategoryIndex].sessions[index];
+                  return _buildTrackTile(session, theme, isDark);
+                },
+                childCount: categories[_selectedCategoryIndex].sessions.length,
+              ),
             ),
           ),
           const SliverToBoxAdapter(child: SizedBox(height: 40)),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryTabs(ThemeData theme) {
+    final categories = SessionData.categories;
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Row(
+        children: List.generate(categories.length, (index) {
+          final isSelected = _selectedCategoryIndex == index;
+          return GestureDetector(
+            onTap: () => setState(() => _selectedCategoryIndex = index),
+            child: Container(
+              margin: const EdgeInsets.only(right: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(25),
+                border: Border.all(
+                  color: isSelected
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurface.withValues(alpha: 0.1),
+                ),
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: theme.colorScheme.primary.withValues(
+                            alpha: 0.3,
+                          ),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Text(
+                categories[index].name,
+                style: GoogleFonts.montserrat(
+                  color: isSelected
+                      ? theme.colorScheme.onPrimary
+                      : theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                  fontSize: 14,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                ),
+              ),
+            ),
+          );
+        }),
       ),
     );
   }
@@ -111,14 +183,14 @@ class _OverviewScreenState extends State<OverviewScreen> {
         IconButton(
           icon: Icon(
             Icons.search,
-            color: theme.colorScheme.onSurface.withOpacity(0.6),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
           ),
           onPressed: () {},
         ),
         IconButton(
           icon: Icon(
             Icons.account_circle_outlined,
-            color: theme.colorScheme.onSurface.withOpacity(0.6),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
           ),
           onPressed: () {},
         ),
@@ -158,7 +230,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
                 color: theme.colorScheme.surface,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: theme.colorScheme.onSurface.withOpacity(0.1),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
                 ),
               ),
               child: Row(
@@ -184,7 +256,9 @@ class _OverviewScreenState extends State<OverviewScreen> {
                       Text(
                         session.genre,
                         style: TextStyle(
-                          color: theme.colorScheme.onSurface.withOpacity(0.6),
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.6,
+                          ),
                           fontSize: 11,
                         ),
                       ),
@@ -199,9 +273,95 @@ class _OverviewScreenState extends State<OverviewScreen> {
     );
   }
 
+  Widget _buildFavoritesTray(ThemeData theme) {
+    return SizedBox(
+      height: 176,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        itemCount: _favoriteSessions.length,
+        itemBuilder: (context, index) {
+          final session = _favoriteSessions[index];
+          return GestureDetector(
+            onTap: () => _playSession(session),
+            child: Container(
+              width: 136,
+              margin: const EdgeInsets.only(right: 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(18),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          _buildSessionImage(session, theme),
+                          DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.transparent,
+                                  Colors.black.withValues(alpha: 0.42),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            right: 10,
+                            bottom: 10,
+                            child: Container(
+                              padding: const EdgeInsets.all(7),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.86),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.play_arrow,
+                                color: Colors.black,
+                                size: 18,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    session.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurface,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    session.genre,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   Widget _buildActivitiesGrid(ThemeData theme) {
-    final sessions = SessionData.sessions;
-    if (sessions.length < 3) return const SizedBox();
+    final categories = SessionData.categories;
+    if (categories.length < 2) return const SizedBox();
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -209,24 +369,50 @@ class _OverviewScreenState extends State<OverviewScreen> {
         children: [
           Row(
             children: [
-              Expanded(child: _buildActivityCard(sessions[0], 120, theme)),
+              Expanded(
+                child: _buildActivityCard(
+                  categories[0].sessions[0],
+                  120,
+                  theme,
+                ),
+              ),
               const SizedBox(width: 12),
-              Expanded(child: _buildActivityCard(sessions[1], 120, theme)),
+              Expanded(
+                child: _buildActivityCard(
+                  categories[1].sessions[0],
+                  120,
+                  theme,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
-          _buildActivityCard(sessions[2], 100, theme, isWide: true),
+          if (categories.length >= 4)
+            Row(
+              children: [
+                Expanded(
+                  child: _buildActivityCard(
+                    categories[2].sessions[0],
+                    120,
+                    theme,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildActivityCard(
+                    categories[3].sessions[0],
+                    120,
+                    theme,
+                  ),
+                ),
+              ],
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildActivityCard(
-    Session session,
-    double height,
-    ThemeData theme, {
-    bool isWide = false,
-  }) {
+  Widget _buildActivityCard(Session session, double height, ThemeData theme) {
     return GestureDetector(
       onTap: () => _playSession(session),
       child: Container(
@@ -234,12 +420,12 @@ class _OverviewScreenState extends State<OverviewScreen> {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24),
           image: DecorationImage(
-          image: session.imageUrl.startsWith('assets/')
-              ? AssetImage(session.imageUrl) as ImageProvider
-              : NetworkImage(session.imageUrl),
+            image: session.imageUrl.startsWith('assets/')
+                ? AssetImage(session.imageUrl) as ImageProvider
+                : NetworkImage(session.imageUrl),
             fit: BoxFit.cover,
             colorFilter: ColorFilter.mode(
-              Colors.black.withOpacity(0.4),
+              Colors.black.withValues(alpha: 0.4),
               BlendMode.darken,
             ),
           ),
@@ -267,7 +453,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
               child: Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -302,7 +488,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
                         return Container(
                           width: 56,
                           height: 56,
-                          color: theme.colorScheme.surfaceVariant,
+                          color: theme.colorScheme.surfaceContainerHighest,
                           child: Icon(
                             Icons.music_note,
                             color: theme.colorScheme.primary,
@@ -319,7 +505,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
                         return Container(
                           width: 56,
                           height: 56,
-                          color: theme.colorScheme.surfaceVariant,
+                          color: theme.colorScheme.surfaceContainerHighest,
                           child: Icon(
                             Icons.music_note,
                             color: theme.colorScheme.primary,
@@ -353,7 +539,9 @@ class _OverviewScreenState extends State<OverviewScreen> {
                           vertical: 3,
                         ),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.primary.withOpacity(0.15),
+                          color: theme.colorScheme.primary.withValues(
+                            alpha: 0.15,
+                          ),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -371,7 +559,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
                   Text(
                     session.description,
                     style: TextStyle(
-                      color: theme.colorScheme.onSurface.withOpacity(0.6),
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                       fontSize: 12,
                     ),
                     maxLines: 1,
@@ -383,12 +571,66 @@ class _OverviewScreenState extends State<OverviewScreen> {
             const SizedBox(width: 12),
             Icon(
               Icons.play_circle_outline,
-              color: theme.colorScheme.onSurface.withOpacity(0.3),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
               size: 28,
             ),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildSessionImage(Session session, ThemeData theme) {
+    final placeholder = Container(
+      color: theme.colorScheme.surfaceContainerHighest,
+      child: Icon(Icons.music_note, color: theme.colorScheme.primary),
+    );
+
+    if (session.imageUrl.startsWith('assets/')) {
+      return Image.asset(
+        session.imageUrl,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => placeholder,
+      );
+    }
+
+    return Image.network(
+      session.imageUrl,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) => placeholder,
+    );
+  }
+
+  List<Session> _resolveFavoriteSessions(
+    List<Track> tracks,
+    List<Session> personalSessions,
+  ) {
+    final bundledById = {
+      for (final session in SessionData.sessions) session.id: session,
+    };
+    final personalById = {
+      for (final session in personalSessions) session.id: session,
+    };
+
+    return tracks.map((track) {
+      final bundled = bundledById[track.id];
+      if (bundled != null) return bundled;
+
+      final personal = personalById[track.id];
+      if (personal != null) return personal;
+
+      return Session(
+        id: track.id,
+        title: track.title,
+        description: track.description,
+        genre: track.genre,
+        audioUrl: track.audioUrl,
+        assetPath: track.assetPath,
+        imageUrl: track.imageUrl,
+        state: MentalState.focus,
+        isPersonal: track.isPersonal,
+        localPath: track.localPath,
+      );
+    }).toList();
   }
 }

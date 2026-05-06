@@ -21,8 +21,8 @@ class AppTheme {
       scaffoldBackgroundColor: lightBackground,
       brightness: Brightness.light,
       colorScheme: const ColorScheme.light(
-        primary: primary,
-        secondary: secondary,
+        primary: lightTextMain,
+        secondary: accent,
         surface: lightSurface,
         onPrimary: Colors.white,
         onSurface: lightTextMain,
@@ -60,14 +60,14 @@ class AppTheme {
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: lightSurface,
-        selectedItemColor: primary,
+        selectedItemColor: lightTextMain,
         unselectedItemColor: lightTextSecondary,
         type: BottomNavigationBarType.fixed,
         elevation: 10,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: primary,
+          backgroundColor: lightTextMain,
           foregroundColor: Colors.white,
           elevation: 0,
           shape: RoundedRectangleBorder(

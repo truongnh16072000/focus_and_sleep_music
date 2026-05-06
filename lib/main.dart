@@ -3,6 +3,7 @@ import 'theme/app_theme.dart';
 import 'services/audio_service.dart';
 import 'services/storage_service.dart';
 import 'services/theme_service.dart';
+import 'services/focus_session_lock_service.dart';
 import 'screens/main_navigation.dart';
 import 'screens/onboarding_screen.dart';
 
@@ -12,6 +13,7 @@ void main() async {
   await StorageService.instance.init();
   await AudioService.instance.init();
   await ThemeService.instance.init();
+  await FocusSessionLockService.instance.init();
   final bool onboardingComplete = await StorageService().isOnboardingComplete();
 
   runApp(NeuroFlowApp(onboardingComplete: onboardingComplete));
@@ -28,7 +30,6 @@ class NeuroFlowApp extends StatefulWidget {
 
 class _NeuroFlowAppState extends State<NeuroFlowApp>
     with WidgetsBindingObserver {
-  
   @override
   void initState() {
     super.initState();
@@ -58,7 +59,6 @@ class _NeuroFlowAppState extends State<NeuroFlowApp>
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      key: const ValueKey('NeuroFlowAppMain'),
       title: 'NeuroFlow',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,

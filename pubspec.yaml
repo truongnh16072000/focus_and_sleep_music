@@ -41,6 +41,7 @@ dependencies:
   audio_session: ^0.2.3
   file_picker: ^8.1.0
   path_provider: ^2.1.5
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:
@@ -80,6 +81,8 @@ flutter:
     - assets/icon/app_icon.png
     - assets/audio/creative/
     - assets/audio/deepwork/
+    - assets/audio/study/
+    - assets/audio/coding/
     - assets/images/sessions/
 
   # An image asset can refer to one or more resolution-specific "variants", see

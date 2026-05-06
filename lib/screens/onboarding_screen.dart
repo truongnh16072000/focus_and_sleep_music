@@ -76,8 +76,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F12),
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
@@ -109,6 +112,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildTopNavigation() {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
@@ -118,7 +122,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             children: [
               if (_currentPage > 0)
                 IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  icon: Icon(Icons.arrow_back, color: theme.colorScheme.onSurface),
                   onPressed: _previousPage,
                 )
               else
@@ -126,7 +130,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               Text(
                 _getStepTitle(),
                 style: GoogleFonts.inter(
-                  color: Colors.white70,
+                  color: theme.colorScheme.onSurface.withOpacity(0.7),
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 1.2,
@@ -147,8 +151,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     margin: const EdgeInsets.symmetric(horizontal: 2),
                     decoration: BoxDecoration(
                       color: index <= _currentPage
-                          ? Colors.white
-                          : Colors.white.withOpacity(0.1),
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.onSurface.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -173,6 +177,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildWelcomeStep() {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 40),
       child: Column(
@@ -183,7 +188,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             "Let's personalize NeuroFlow for you",
             textAlign: TextAlign.center,
             style: GoogleFonts.montserrat(
-              color: Colors.white,
+              color: theme.colorScheme.onSurface,
               fontSize: 32,
               fontWeight: FontWeight.bold,
             ),
@@ -192,7 +197,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           Text(
             "Quick Personalization",
             style: GoogleFonts.inter(
-              color: Colors.white.withOpacity(0.5),
+              color: theme.colorScheme.onSurface.withOpacity(0.5),
               fontSize: 16,
             ),
           ).animate(delay: 200.ms).fadeIn(),
@@ -216,11 +221,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.info_outline, color: Colors.white.withOpacity(0.3), size: 16),
+              Icon(Icons.info_outline, color: theme.colorScheme.onSurface.withOpacity(0.3), size: 16),
               const SizedBox(width: 8),
               Text(
                 "All of these can be changed anytime.",
-                style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 12),
+                style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.3), fontSize: 12),
               ),
             ],
           ),
@@ -231,6 +236,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildPersonalizeItem(IconData icon, String title, String subtitle) {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 32),
       child: Row(
@@ -238,11 +244,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
+              color: theme.colorScheme.onSurface.withOpacity(0.05),
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white.withOpacity(0.1)),
+              border: Border.all(color: theme.colorScheme.onSurface.withOpacity(0.1)),
             ),
-            child: Icon(icon, color: Colors.white, size: 24),
+            child: Icon(icon, color: theme.colorScheme.onSurface, size: 24),
           ),
           const SizedBox(width: 20),
           Expanded(
@@ -251,8 +257,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: theme.colorScheme.onSurface,
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
@@ -260,7 +266,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 Text(
                   subtitle,
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.5),
+                    color: theme.colorScheme.onSurface.withOpacity(0.5),
                     fontSize: 13,
                   ),
                 ),
@@ -273,6 +279,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildGoalStep() {
+    final theme = Theme.of(context);
     final goals = ["Get motivated", "Stay energized", "Block distractions", "Enhance Concentration"];
     
     return Padding(
@@ -284,7 +291,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           Text(
             "What's your focus goal?",
             style: GoogleFonts.montserrat(
-              color: Colors.white,
+              color: theme.colorScheme.onSurface,
               fontSize: 28,
               fontWeight: FontWeight.bold,
             ),
@@ -292,7 +299,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           const SizedBox(height: 8),
           Text(
             "Select as many as you like",
-            style: TextStyle(color: Colors.white.withOpacity(0.5)),
+            style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.5)),
           ),
           const SizedBox(height: 40),
           ...goals.map((goal) => _buildSelectionCard(
@@ -317,6 +324,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildWorkTypeStep() {
+    final theme = Theme.of(context);
     final types = ["Deep Work", "Creative", "Study", "Coding"];
     
     return Padding(
@@ -328,7 +336,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           Text(
             "What type of work?",
             style: GoogleFonts.montserrat(
-              color: Colors.white,
+              color: theme.colorScheme.onSurface,
               fontSize: 28,
               fontWeight: FontWeight.bold,
             ),
@@ -336,7 +344,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           const SizedBox(height: 8),
           Text(
             "We'll optimize the neural effect",
-            style: TextStyle(color: Colors.white.withOpacity(0.5)),
+            style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.5)),
           ),
           const SizedBox(height: 40),
           ...types.map((type) => _buildSelectionCard(
@@ -354,6 +362,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildStimulationStep() {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
@@ -362,7 +371,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           Text(
             "Stimulation Needs",
             style: GoogleFonts.montserrat(
-              color: Colors.white,
+              color: theme.colorScheme.onSurface,
               fontSize: 28,
               fontWeight: FontWeight.bold,
             ),
@@ -371,22 +380,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           Text(
             "How sensitive are you to background music?",
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white.withOpacity(0.5)),
+            style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.5)),
           ),
           const SizedBox(height: 80),
           Container(
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
+              color: theme.colorScheme.onSurface.withOpacity(0.05),
               borderRadius: BorderRadius.circular(32),
-              border: Border.all(color: Colors.white.withOpacity(0.1)),
+              border: Border.all(color: theme.colorScheme.onSurface.withOpacity(0.1)),
             ),
             child: Column(
               children: [
                 Text(
                   _getStimulationLabel().toUpperCase(),
                   style: GoogleFonts.inter(
-                    color: Colors.white,
+                    color: theme.colorScheme.onSurface,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 2,
@@ -396,16 +405,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 Text(
                   _getStimulationDesc(),
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13),
+                  style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.5), fontSize: 13),
                 ),
                 const SizedBox(height: 48),
                 SliderTheme(
                   data: SliderTheme.of(context).copyWith(
                     trackHeight: 4,
-                    activeTrackColor: Colors.white,
-                    inactiveTrackColor: Colors.white.withOpacity(0.1),
-                    thumbColor: Colors.white,
-                    overlayColor: Colors.white.withOpacity(0.1),
+                    activeTrackColor: theme.colorScheme.primary,
+                    inactiveTrackColor: theme.colorScheme.onSurface.withOpacity(0.1),
+                    thumbColor: theme.colorScheme.primary,
+                    overlayColor: theme.colorScheme.primary.withOpacity(0.1),
                   ),
                   child: Slider(
                     value: _stimulationLevel,
@@ -416,8 +425,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text("CHILL", style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 10, fontWeight: FontWeight.bold)),
-                    Text("INTENSE", style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 10, fontWeight: FontWeight.bold)),
+                    Text("CHILL", style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.3), fontSize: 10, fontWeight: FontWeight.bold)),
+                    Text("INTENSE", style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.3), fontSize: 10, fontWeight: FontWeight.bold)),
                   ],
                 ),
               ],
@@ -441,6 +450,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildSelectionCard(String title, bool isSelected, VoidCallback onTap, {String? info}) {
+    final theme = Theme.of(context);
     return Column(
       children: [
         GestureDetector(
@@ -450,10 +460,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             margin: const EdgeInsets.only(bottom: 12),
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
             decoration: BoxDecoration(
-              color: isSelected ? Colors.white.withOpacity(0.1) : Colors.transparent,
+              color: isSelected ? theme.colorScheme.primary.withOpacity(0.1) : Colors.transparent,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: isSelected ? Colors.white : Colors.white.withOpacity(0.1),
+                color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface.withOpacity(0.1),
                 width: 1,
               ),
             ),
@@ -463,7 +473,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   child: Text(
                     title,
                     style: TextStyle(
-                      color: isSelected ? Colors.white : Colors.white.withOpacity(0.7),
+                      color: isSelected ? theme.colorScheme.onSurface : theme.colorScheme.onSurface.withOpacity(0.7),
                       fontSize: 16,
                       fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                     ),
@@ -475,12 +485,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: isSelected ? Colors.white : Colors.white.withOpacity(0.2),
+                      color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface.withOpacity(0.2),
                     ),
-                    color: isSelected ? Colors.white : Colors.transparent,
+                    color: isSelected ? theme.colorScheme.primary : Colors.transparent,
                   ),
                   child: isSelected
-                      ? const Icon(Icons.check, size: 16, color: Colors.black)
+                      ? Icon(Icons.check, size: 16, color: theme.colorScheme.onPrimary)
                       : null,
                 ),
               ],
@@ -499,7 +509,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   child: Text(
                     info,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.6),
+                      color: theme.colorScheme.onSurface.withOpacity(0.6),
                       fontSize: 13,
                       height: 1.4,
                     ),
@@ -513,6 +523,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildScienceStep() {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
@@ -522,7 +533,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             textAlign: TextAlign.center,
             text: TextSpan(
               style: GoogleFonts.montserrat(
-                color: Colors.white,
+                color: theme.colorScheme.onSurface,
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
               ),
@@ -540,7 +551,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             "fMRI scans show NeuroFlow increases blood flow to brain regions that maintain focus and energy.",
             textAlign: TextAlign.center,
             style: GoogleFonts.inter(
-              color: Colors.white.withOpacity(0.7),
+              color: theme.colorScheme.onSurface.withOpacity(0.7),
               fontSize: 16,
               height: 1.5,
             ),
@@ -550,19 +561,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
+              color: theme.colorScheme.onSurface.withOpacity(0.05),
               borderRadius: BorderRadius.circular(32),
-              border: Border.all(color: Colors.white.withOpacity(0.1)),
+              border: Border.all(color: theme.colorScheme.onSurface.withOpacity(0.1)),
             ),
             child: Column(
               children: [
-                const Text(
+                Text(
                   "fMRI studies:",
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.bold),
                 ),
                 Text(
                   "Blood flow in the brain",
-                  style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12),
+                  style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.5), fontSize: 12),
                 ),
                 const SizedBox(height: 32),
                 Row(
@@ -577,7 +588,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   "Research funded by the National Science Foundation",
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.3),
+                    color: theme.colorScheme.onSurface.withOpacity(0.3),
                     fontSize: 10,
                   ),
                 ),
@@ -590,6 +601,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildBrainIcon(String label, Color color) {
+    final theme = Theme.of(context);
     return Column(
       children: [
         Stack(
@@ -609,7 +621,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ],
               ),
             ),
-            Icon(Icons.psychology, size: 60, color: Colors.white.withOpacity(0.8)),
+            Icon(Icons.psychology, size: 60, color: theme.colorScheme.onSurface.withOpacity(0.8)),
           ],
         ),
         const SizedBox(height: 12),
@@ -618,8 +630,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           child: Text(
             label,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: theme.colorScheme.onSurface,
               fontSize: 10,
               fontWeight: FontWeight.bold,
             ),
@@ -630,6 +642,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildActivityStep() {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24.0),
       child: Column(
@@ -639,7 +652,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           Text(
             "Get started",
             style: GoogleFonts.montserrat(
-              color: Colors.white,
+              color: theme.colorScheme.onSurface,
               fontSize: 32,
               fontWeight: FontWeight.bold,
             ),
@@ -648,7 +661,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           Text(
             "What would you like to try first?",
             style: GoogleFonts.inter(
-              color: Colors.white.withOpacity(0.6),
+              color: theme.colorScheme.onSurface.withOpacity(0.6),
               fontSize: 16,
             ),
           ),
@@ -689,6 +702,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildCategoryCard(String title, String imagePath, List<Color> gradientColors, Session session) {
+    final theme = Theme.of(context);
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       height: 120,
@@ -754,8 +768,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     begin: Alignment.centerLeft,
                     end: Alignment.centerRight,
                     colors: [
-                      const Color(0xFF0F0F12).withOpacity(0.9),
-                      const Color(0xFF0F0F12).withOpacity(0.4),
+                      theme.scaffoldBackgroundColor.withOpacity(0.9),
+                      theme.scaffoldBackgroundColor.withOpacity(0.4),
                       Colors.transparent,
                     ],
                     stops: const [0.3, 0.6, 0.9],
@@ -770,6 +784,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildBottomButton() {
+    final theme = Theme.of(context);
     bool canContinue = true;
     if (_currentPage == 1 && _selectedGoals.isEmpty) canContinue = false;
     if (_currentPage == 2 && _selectedWorkType.isEmpty) canContinue = false;
@@ -782,9 +797,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         child: ElevatedButton(
           onPressed: canContinue ? _nextPage : null,
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.white,
-            foregroundColor: Colors.black,
-            disabledBackgroundColor: Colors.white.withOpacity(0.2),
+            backgroundColor: theme.colorScheme.onSurface,
+            foregroundColor: theme.scaffoldBackgroundColor,
+            disabledBackgroundColor: theme.colorScheme.onSurface.withOpacity(0.2),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(28),
             ),

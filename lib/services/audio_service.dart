@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_session/audio_session.dart';
@@ -22,6 +24,10 @@ class AudioService {
 
   bool _isInitialized = false;
   Session? _pendingSession;
+  final Stopwatch _focusStopwatch = Stopwatch();
+  Duration _accumulatedFocusTime = Duration.zero;
+  Session? _trackedFocusSession;
+  DateTime? _focusStartedAt;
 
   Future<void> init() async {
     if (_isInitialized) return;
@@ -31,6 +37,7 @@ class AudioService {
 
     _player.playingStream.listen((playing) {
       isPlaying.value = playing;
+      _handlePlaybackTracking(playing);
     });
 
     _player.positionStream.listen((p) {
@@ -61,6 +68,7 @@ class AudioService {
 
   Future<void> loadSession(Session session) async {
     try {
+      await persistFocusTime();
       currentSession.value = session;
       _pendingSession = session;
 
@@ -77,9 +85,10 @@ class AudioService {
 
       await _player.setVolume(stimulationLevel.value);
       await _player.play();
+      _startFocusTrackingFor(session);
 
       // Save to recent history as soon as it starts playing
-      StorageService().saveRecentSession(session);
+      await StorageService.instance.saveRecentSession(session);
       historyUpdate.value++;
     } catch (e) {
       debugPrint("Error loading session: $e");
@@ -101,6 +110,12 @@ class AudioService {
     } else {
       await _player.play();
     }
+  }
+
+  Future<void> stop() async {
+    await _player.stop();
+    await persistFocusTime();
+    isPlaying.value = false;
   }
 
   Future<void> seek(Duration position) async {
@@ -139,7 +154,88 @@ class AudioService {
     }
   }
 
+  Future<bool> persistFocusTime({
+    bool continueIfPlaying = false,
+    bool notifyListeners = true,
+  }) async {
+    _captureCurrentFocusSegment();
+
+    final session =
+        _trackedFocusSession ?? currentSession.value ?? _pendingSession;
+    final startedAt = _focusStartedAt;
+    if (session == null || startedAt == null) {
+      return false;
+    }
+
+    final didSave = await StorageService.instance.saveFocusSessionRecord(
+      duration: _accumulatedFocusTime,
+      session: session,
+      startedAt: startedAt,
+    );
+
+    if (!didSave) {
+      if (continueIfPlaying && _player.playing) {
+        _focusStopwatch.start();
+      }
+      return false;
+    }
+
+    _resetFocusTracking();
+
+    if (continueIfPlaying && _player.playing && currentSession.value != null) {
+      _startFocusTrackingFor(currentSession.value!);
+    }
+
+    if (notifyListeners) {
+      historyUpdate.value++;
+    }
+    return true;
+  }
+
+  void _handlePlaybackTracking(bool playing) {
+    if (playing) {
+      final session = currentSession.value ?? _pendingSession;
+      if (session != null) {
+        _startFocusTrackingFor(session);
+      }
+      return;
+    }
+
+    _captureCurrentFocusSegment();
+  }
+
+  void _startFocusTrackingFor(Session session) {
+    if (_trackedFocusSession?.id != session.id) {
+      _resetFocusTracking();
+      _trackedFocusSession = session;
+      _focusStartedAt = DateTime.now();
+    }
+
+    if (!_focusStopwatch.isRunning) {
+      _focusStopwatch.start();
+    }
+  }
+
+  void _captureCurrentFocusSegment() {
+    if (!_focusStopwatch.isRunning) return;
+
+    _accumulatedFocusTime += _focusStopwatch.elapsed;
+    _focusStopwatch
+      ..stop()
+      ..reset();
+  }
+
+  void _resetFocusTracking() {
+    _focusStopwatch
+      ..stop()
+      ..reset();
+    _accumulatedFocusTime = Duration.zero;
+    _trackedFocusSession = null;
+    _focusStartedAt = null;
+  }
+
   Future<void> dispose() async {
+    await persistFocusTime();
     await _player.dispose();
     isPlaying.dispose();
     position.dispose();
