@@ -274,7 +274,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
             ],
           ),
           border: Border.all(
-            color: Colors.white.withValues(alpha: isSelected ? 0.22 : 0.12),
+            color: theme.colorScheme.onSurface.withValues(alpha: isSelected ? 0.22 : 0.12),
             width: isSelected ? 1.6 : 1.2,
           ),
           boxShadow: [
@@ -295,7 +295,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
                     begin: Alignment.centerLeft,
                     end: Alignment.centerRight,
                     colors: [
-                      Colors.black.withValues(alpha: 0.08),
+                      theme.colorScheme.onSurface.withValues(alpha: 0.08),
                       Colors.transparent,
                       item.glowColor.withValues(alpha: 0.18),
                     ],
@@ -401,6 +401,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
   Widget _buildRecentCard(ThemeData theme, Session session, int index) {
     final timeLabel = index.isEven ? "90 Minutes" : "Infinity";
     final icon = index.isEven ? Icons.timer_outlined : Icons.all_inclusive;
+    final isDark = theme.brightness == Brightness.dark;
 
     return GestureDetector(
       onTap: () => _playSession(session),
@@ -409,12 +410,18 @@ class _OverviewScreenState extends State<OverviewScreen> {
         padding: const EdgeInsets.fromLTRB(22, 14, 16, 14),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(17),
-          gradient: const LinearGradient(
+          gradient: LinearGradient(
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
-            colors: [Color(0xFF24162D), Color(0xFF382542), Color(0xFF994E68)],
+            colors: isDark
+                ? [const Color(0xFF24162D), const Color(0xFF382542), const Color(0xFF994E68)]
+                : [
+                    theme.colorScheme.surface,
+                    theme.colorScheme.surfaceContainerHighest,
+                    theme.colorScheme.secondary.withValues(alpha: 0.1),
+                  ],
           ),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+          border: Border.all(color: theme.colorScheme.onSurface.withValues(alpha: 0.14)),
         ),
         child: Row(
           children: [
@@ -468,7 +475,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
               height: 56,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white,
+                color: isDark ? Colors.white : theme.colorScheme.primary,
                 boxShadow: [
                   BoxShadow(
                     color: const Color(0xFFFF6E8E).withValues(alpha: 0.46),
@@ -477,9 +484,9 @@ class _OverviewScreenState extends State<OverviewScreen> {
                   ),
                 ],
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.play_arrow_rounded,
-                color: Color(0xFFE86B88),
+                color: isDark ? const Color(0xFFE86B88) : theme.colorScheme.onPrimary,
                 size: 34,
               ),
             ),
@@ -569,14 +576,15 @@ class _OverviewScreenState extends State<OverviewScreen> {
   }
 
   Widget _buildRecommendedTrack(ThemeData theme, Session session) {
+    final isDark = theme.brightness == Brightness.dark;
     return GestureDetector(
       onTap: () => _playSession(session),
       child: Container(
         height: 82,
         decoration: BoxDecoration(
-          color: const Color(0xFF201A2A).withValues(alpha: 0.92),
+          color: isDark ? const Color(0xFF201A2A).withValues(alpha: 0.92) : theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(17),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.13)),
+          border: Border.all(color: theme.colorScheme.onSurface.withValues(alpha: 0.13)),
         ),
         clipBehavior: Clip.antiAlias,
         child: Row(
@@ -594,9 +602,9 @@ class _OverviewScreenState extends State<OverviewScreen> {
                 children: [
                   Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.drag_handle_rounded,
-                        color: Color(0xFFD4BFCB),
+                        color: isDark ? const Color(0xFFD4BFCB) : theme.colorScheme.primary,
                         size: 22,
                       ),
                       const SizedBox(width: 8),
@@ -636,7 +644,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
               margin: const EdgeInsets.only(right: 18),
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.12),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Text(

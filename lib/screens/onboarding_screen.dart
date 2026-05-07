@@ -18,7 +18,7 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
-  final int _totalSteps = 6;
+  final int _totalSteps = 5;
 
   // Selections
   final List<String> _selectedGoals = [];
@@ -33,7 +33,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         curve: Curves.easeInOut,
       );
     } else {
-      _completeOnboarding();
+      _startBasedOnAnswers();
     }
   }
 
@@ -46,30 +46,37 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
-  Future<void> _completeOnboarding() async {
+  Future<void> _startBasedOnAnswers() async {
     await StorageService().setOnboardingComplete();
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const MainNavigation()),
-      );
+    
+    Session? session;
+    switch (_selectedWorkType) {
+      case "Deep Work":
+        session = SessionData.deepWork.isNotEmpty ? SessionData.deepWork[0] : null;
+        break;
+      case "Creative":
+        session = SessionData.creative.isNotEmpty ? SessionData.creative[0] : null;
+        break;
+      case "Study":
+        session = SessionData.study.isNotEmpty ? SessionData.study[0] : null;
+        break;
+      case "Coding":
+        session = SessionData.coding.isNotEmpty ? SessionData.coding[0] : null;
+        break;
     }
-  }
-
-  void _startWithSession(Session session) async {
-    await StorageService().setOnboardingComplete();
-    // Set stimulation level based on onboarding answer
-    session.defaultStimulation = _stimulationLevel;
+    
+    final nonNullSession = session ?? SessionData.sessions.first;
+    nonNullSession.defaultStimulation = _stimulationLevel;
     
     if (mounted) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const MainNavigation()),
       );
-      AudioService.instance.loadSession(session);
+      AudioService.instance.loadSession(nonNullSession);
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => PlayerScreen(session: session)),
+        MaterialPageRoute(builder: (context) => PlayerScreen(session: nonNullSession)),
       );
     }
   }
@@ -100,11 +107,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   _buildWorkTypeStep(),
                   _buildStimulationStep(),
                   _buildScienceStep(),
-                  _buildActivityStep(),
                 ],
               ),
             ),
-            if (_currentPage < _totalSteps - 1) _buildBottomButton(),
+            _buildBottomButton(),
           ],
         ),
       ),
@@ -171,7 +177,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       case 2: return "YOUR WORK";
       case 3: return "STIMULATION";
       case 4: return "SCIENCE";
-      case 5: return "GET STARTED";
       default: return "";
     }
   }
@@ -641,148 +646,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  Widget _buildActivityStep() {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          const SizedBox(height: 40),
-          Text(
-            "Get started",
-            style: GoogleFonts.montserrat(
-              color: theme.colorScheme.onSurface,
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            "What would you like to try first?",
-            style: GoogleFonts.inter(
-              color: theme.colorScheme.onSurface.withOpacity(0.6),
-              fontSize: 16,
-            ),
-          ),
-          const SizedBox(height: 40),
-          Expanded(
-            child: ListView(
-              children: [
-                _buildCategoryCard(
-                  "Focus",
-                  "assets/images/focus.png",
-                  [const Color(0xFF8E24AA), const Color(0xFFD81B60)],
-                  SessionData.deepWork[0],
-                ),
-                _buildCategoryCard(
-                  "Relax",
-                  "assets/images/relax.png",
-                  [const Color(0xFF1E88E5), const Color(0xFF00ACC1)],
-                  SessionData.creative[0],
-                ),
-                _buildCategoryCard(
-                  "Sleep",
-                  "assets/images/sleep.png",
-                  [const Color(0xFF3949AB), const Color(0xFF5E35B1)],
-                  SessionData.creative[1],
-                ),
-                _buildCategoryCard(
-                  "Meditate",
-                  "assets/images/meditate.png",
-                  [const Color(0xFF43A047), const Color(0xFF00897B)],
-                  SessionData.creative[2],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCategoryCard(String title, String imagePath, List<Color> gradientColors, Session session) {
-    final theme = Theme.of(context);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      height: 120,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            gradientColors[0].withOpacity(0.4),
-            gradientColors[1].withOpacity(0.2),
-          ],
-        ),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.1),
-          width: 1,
-        ),
-      ),
-      child: InkWell(
-        onTap: () => _startWithSession(session),
-        borderRadius: BorderRadius.circular(24),
-        child: Stack(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  title,
-                  style: GoogleFonts.montserrat(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              right: 0,
-              bottom: 0,
-              top: 0,
-              width: 160,
-              child: ClipRRect(
-                borderRadius: const BorderRadius.only(
-                  topRight: Radius.circular(24),
-                  bottomRight: Radius.circular(24),
-                ),
-                child: Image.asset(
-                  imagePath,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    color: Colors.white.withOpacity(0.05),
-                    child: const Icon(Icons.image, color: Colors.white24),
-                  ),
-                ),
-              ),
-            ),
-            Positioned.fill(
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(24),
-                  gradient: LinearGradient(
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                    colors: [
-                      theme.scaffoldBackgroundColor.withOpacity(0.9),
-                      theme.scaffoldBackgroundColor.withOpacity(0.4),
-                      Colors.transparent,
-                    ],
-                    stops: const [0.3, 0.6, 0.9],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    ).animate().fadeIn().slideX(begin: 0.1, end: 0);
-  }
-
   Widget _buildBottomButton() {
     final theme = Theme.of(context);
     bool canContinue = true;
@@ -806,7 +669,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             elevation: 0,
           ),
           child: Text(
-            "Continue",
+            _currentPage == _totalSteps - 1 ? "Start your flow" : "Continue",
             style: GoogleFonts.inter(
               fontSize: 16,
               fontWeight: FontWeight.bold,

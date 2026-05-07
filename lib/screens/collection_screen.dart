@@ -313,10 +313,15 @@ class CollectionScreenState extends State<CollectionScreen> {
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [
-                  theme.colorScheme.surface.withValues(alpha: 0.82),
-                  const Color(0xFF23152D).withValues(alpha: 0.72),
-                ],
+                colors: theme.brightness == Brightness.dark
+                    ? [
+                        theme.colorScheme.surface.withValues(alpha: 0.82),
+                        const Color(0xFF23152D).withValues(alpha: 0.72),
+                      ]
+                    : [
+                        theme.colorScheme.surface,
+                        theme.colorScheme.surfaceContainerHighest,
+                      ],
               ),
               border: Border.all(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.12),
@@ -342,7 +347,9 @@ class CollectionScreenState extends State<CollectionScreen> {
                             Icon(
                               Icons.drag_handle_rounded,
                               color: index < 5
-                                  ? const Color(0xFFB837F0)
+                                  ? (theme.brightness == Brightness.dark
+                                      ? const Color(0xFFB837F0)
+                                      : theme.colorScheme.primary)
                                   : theme.colorScheme.onSurface.withValues(
                                       alpha: 0.82,
                                     ),
@@ -406,7 +413,9 @@ class CollectionScreenState extends State<CollectionScreen> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.inter(
-                            color: const Color(0xFFFF5C8F),
+                            color: theme.brightness == Brightness.dark
+                                ? const Color(0xFFFF5C8F)
+                                : theme.colorScheme.primary,
                             fontSize: isCompact ? 11 : 13,
                             fontWeight: FontWeight.w800,
                           ),

@@ -40,8 +40,8 @@ class _MainNavigationState extends State<MainNavigation> {
     return Scaffold(
       body: IndexedStack(index: _currentIndex, children: _screens),
       bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          color: Color(0xFF0F0F12),
+        decoration: BoxDecoration(
+          color: theme.bottomNavigationBarTheme.backgroundColor,
         ),
         child: SafeArea(
           child: Column(
@@ -172,6 +172,8 @@ class _MiniMusicBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    final isDark = theme.brightness == Brightness.dark;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
       child: Container(
@@ -180,14 +182,21 @@ class _MiniMusicBar extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              const Color(0xFF4A6B6A).withValues(alpha: 0.9),
-              const Color(0xFF2D3E3D).withValues(alpha: 0.95),
-            ],
+            colors: isDark
+                ? [
+                    const Color(0xFF4A6B6A).withValues(alpha: 0.9),
+                    const Color(0xFF2D3E3D).withValues(alpha: 0.95),
+                  ]
+                : [
+                    theme.colorScheme.primary.withValues(alpha: 0.1),
+                    theme.colorScheme.primary.withValues(alpha: 0.05),
+                  ],
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.3),
+              color: isDark
+                  ? Colors.black.withValues(alpha: 0.3)
+                  : Colors.black.withValues(alpha: 0.05),
               blurRadius: 15,
               offset: const Offset(0, 5),
             ),
@@ -219,7 +228,9 @@ class _MiniMusicBar extends StatelessWidget {
                           Icon(
                             Icons.notes_rounded,
                             size: 14,
-                            color: Colors.white.withValues(alpha: 0.9),
+                            color: isDark
+                                ? Colors.white.withValues(alpha: 0.9)
+                                : theme.colorScheme.onSurface,
                           ),
                           const SizedBox(width: 6),
                           Expanded(
@@ -227,8 +238,10 @@ class _MiniMusicBar extends StatelessWidget {
                               session.title,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: TextStyle(
+                                color: isDark
+                                    ? Colors.white
+                                    : theme.colorScheme.onSurface,
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -242,7 +255,10 @@ class _MiniMusicBar extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.6),
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.6)
+                              : theme.colorScheme.onSurface
+                                  .withValues(alpha: 0.6),
                           fontSize: 11,
                           letterSpacing: 1.1,
                           fontWeight: FontWeight.w700,
@@ -263,19 +279,23 @@ class _MiniMusicBar extends StatelessWidget {
                         return IconButton(
                           onPressed: AudioService.instance.togglePlay,
                           icon: isBuffering
-                              ? const SizedBox(
+                              ? SizedBox(
                                   width: 24,
                                   height: 24,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2.5,
-                                    color: Colors.white,
+                                    color: isDark
+                                        ? Colors.white
+                                        : theme.colorScheme.onSurface,
                                   ),
                                 )
                               : Icon(
                                   isPlaying
                                       ? Icons.pause_rounded
                                       : Icons.play_arrow_rounded,
-                                  color: Colors.white,
+                                  color: isDark
+                                      ? Colors.white
+                                      : theme.colorScheme.onSurface,
                                   size: 32,
                                 ),
                         );
@@ -292,6 +312,7 @@ class _MiniMusicBar extends StatelessWidget {
   }
 
   Widget _buildTimerPill(ThemeData theme) {
+    final isDark = theme.brightness == Brightness.dark;
     return ValueListenableBuilder<String>(
       valueListenable: AudioService.instance.focusTimerLabel,
       builder: (context, timerLabel, _) {
@@ -311,12 +332,18 @@ class _MiniMusicBar extends StatelessWidget {
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: isRest
-                        ? const Color(0xFF8B6914).withValues(alpha: 0.3)
-                        : Colors.black.withValues(alpha: 0.2),
+                        ? (isDark
+                            ? const Color(0xFF8B6914).withValues(alpha: 0.3)
+                            : const Color(0xFFFFF3E0))
+                        : (isDark
+                            ? Colors.black.withValues(alpha: 0.2)
+                            : Colors.black.withValues(alpha: 0.05)),
                     borderRadius: BorderRadius.circular(12),
                     border: isRest
                         ? Border.all(
-                            color: const Color(0xFFD4A017).withValues(alpha: 0.4),
+                            color: isDark
+                                ? const Color(0xFFD4A017).withValues(alpha: 0.4)
+                                : const Color(0xFFFFB74D),
                             width: 1,
                           )
                         : null,
@@ -326,9 +353,12 @@ class _MiniMusicBar extends StatelessWidget {
                     children: [
                       Text(
                         displayMode,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
-                          color: Colors.white70,
+                          color: isDark
+                              ? Colors.white70
+                              : theme.colorScheme.onSurface
+                                  .withValues(alpha: 0.7),
                         ),
                       ),
                       const SizedBox(width: 5),
@@ -336,8 +366,12 @@ class _MiniMusicBar extends StatelessWidget {
                         displayLabel,
                         style: TextStyle(
                           color: isRest
-                              ? const Color(0xFFFFD54F)
-                              : Colors.white,
+                              ? (isDark
+                                  ? const Color(0xFFFFD54F)
+                                  : const Color(0xFFF57C00))
+                              : (isDark
+                                  ? Colors.white
+                                  : theme.colorScheme.onSurface),
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
                           fontFeatures: const [FontFeature.tabularFigures()],

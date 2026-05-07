@@ -177,11 +177,11 @@ class _PlayerScreenState extends State<PlayerScreen>
                         : defaultSessionImageUrl,
                     fit: BoxFit.cover,
                     placeholder: (context, url) =>
-                        Container(color: Colors.black),
+                        Container(color: theme.scaffoldBackgroundColor),
                     errorWidget: (context, url, error) =>
-                        Container(color: Colors.black),
+                        Container(color: theme.scaffoldBackgroundColor),
                   )
-                : Container(color: Colors.black),
+                : Container(color: theme.scaffoldBackgroundColor),
           ),
 
           // 2. Dark Overlay & Blur for readability
@@ -192,8 +192,8 @@ class _PlayerScreenState extends State<PlayerScreen>
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.black.withValues(alpha: 0.4),
-                    Colors.black.withValues(alpha: 0.7),
+                    theme.scaffoldBackgroundColor.withValues(alpha: 0.4),
+                    theme.scaffoldBackgroundColor.withValues(alpha: 0.7),
                     theme.scaffoldBackgroundColor.withValues(alpha: 0.95),
                   ],
                   stops: const [0.0, 0.4, 0.85],
@@ -608,7 +608,9 @@ class _PlayerScreenState extends State<PlayerScreen>
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.2),
+                              color: theme.brightness == Brightness.dark
+                                  ? Colors.black.withValues(alpha: 0.2)
+                                  : Colors.black.withValues(alpha: 0.05),
                               blurRadius: 20,
                               offset: const Offset(0, 10),
                             ),
