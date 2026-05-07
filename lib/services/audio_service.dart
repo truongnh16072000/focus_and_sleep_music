@@ -24,6 +24,7 @@ class AudioService {
   final ValueNotifier<List<Session>> queue = ValueNotifier([]);
   final ValueNotifier<int> queueIndex = ValueNotifier(-1);
   final ValueNotifier<bool> hasActiveSession = ValueNotifier(false);
+  final ValueNotifier<bool> showBackgroundImage = ValueNotifier(true);
 
   // Focus timer state for mini player display
   final ValueNotifier<String> focusTimerLabel = ValueNotifier('');
@@ -56,6 +57,7 @@ class AudioService {
     await session.configure(const AudioSessionConfiguration.music());
 
     timerSettings.value = await StorageService.instance.getTimerSettings();
+    showBackgroundImage.value = await StorageService.instance.getShowBackgroundImage();
 
     _player.playingStream.listen((playing) {
       isPlaying.value = playing;
@@ -208,6 +210,12 @@ class AudioService {
     } catch (e) {
       debugPrint("Error loading audio: $e");
     }
+  }
+
+  Future<void> toggleBackgroundImage() async {
+    final newValue = !showBackgroundImage.value;
+    showBackgroundImage.value = newValue;
+    await StorageService.instance.setShowBackgroundImage(newValue);
   }
 
   Future<void> togglePlay() async {

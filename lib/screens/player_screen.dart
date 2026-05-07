@@ -23,6 +23,7 @@ class _PlayerScreenState extends State<PlayerScreen>
   late AnimationController _waveController;
   double _stimulationLevel = 0.5;
   bool _isFavorited = false;
+  bool get _showBackgroundImage => AudioService.instance.showBackgroundImage.value;
   late final VoidCallback _playbackListener;
   Duration get _visibleFocusElapsed => AudioService.instance.visibleFocusElapsed.value;
   set _visibleFocusElapsed(Duration val) => AudioService.instance.visibleFocusElapsed.value = val;
@@ -46,7 +47,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     "Efficiency is doing things right; effectiveness is doing the right things.",
     "The way to get started is to quit talking and begin doing.",
     "The secret of getting ahead is getting started.",
-    "Don't watch the clock; do what it does. Keep going.",
+    "Don't watch the clock, do what it does. Keep going.",
     "It's not about having time, it's about making time.",
   ];
   late String _currentQuote;
@@ -158,7 +159,7 @@ class _PlayerScreenState extends State<PlayerScreen>
         children: [
           // 1. Background Artwork Layer
           Positioned.fill(
-            child: sessionImageUrl.isNotEmpty
+            child: _showBackgroundImage && sessionImageUrl.isNotEmpty
                 ? CachedNetworkImage(
                     imageUrl: isOnlineImageUrl(sessionImageUrl)
                         ? sessionImageUrl
@@ -284,9 +285,17 @@ class _PlayerScreenState extends State<PlayerScreen>
                 ),
               ),
               const SizedBox(width: 12),
-              Icon(
-                Icons.music_note_outlined,
-                color: theme.colorScheme.onSurface,
+              GestureDetector(
+                onTap: () {
+                  AudioService.instance.toggleBackgroundImage();
+                  setState(() {});
+                },
+                child: Icon(
+                  _showBackgroundImage
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                  color: theme.colorScheme.onSurface,
+                ),
               ),
             ],
           ),
@@ -499,14 +508,9 @@ class _PlayerScreenState extends State<PlayerScreen>
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        _buildTagCapsule(
-                          theme,
-                          widget.session.genre.toUpperCase(),
-                        ),
                         ...widget.session.tags.map(
                           (tag) => _buildTagCapsule(theme, tag.toUpperCase()),
-                        ),
-                        _buildTagCapsule(theme, "+ DETAILS"),
+                        )
                       ],
                     ),
                   ],
@@ -645,8 +649,7 @@ class _PlayerScreenState extends State<PlayerScreen>
             ),
           ],
         ),
-        const SizedBox(height: 24),
-        
+        const SizedBox(height: 24)
       ],
     );
   }

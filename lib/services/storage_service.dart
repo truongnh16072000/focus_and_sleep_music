@@ -105,6 +105,7 @@ class StorageService {
   static const String _totalSessionsKey = 'total_sessions';
   static const String _focusSessionRecordsKey = 'focus_session_records';
   static const String _timerSettingsKey = 'timer_settings';
+  static const String _showBackgroundKey = 'show_background_image';
 
   SharedPreferences? _prefs;
 
@@ -250,6 +251,14 @@ class StorageService {
     } catch (e) {
       return TimerSettings();
     }
+  }
+
+  Future<void> setShowBackgroundImage(bool value) async {
+    await _safePrefs.setBool(_showBackgroundKey, value);
+  }
+
+  Future<bool> getShowBackgroundImage() async {
+    return _safePrefs.getBool(_showBackgroundKey) ?? true;
   }
 
   Future<void> _migrateStoredSessionImages() async {
