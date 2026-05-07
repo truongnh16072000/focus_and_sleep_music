@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:audio_service/audio_service.dart' as audio_service;
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_session/audio_session.dart';
@@ -14,6 +15,7 @@ class AudioService {
 
   final AudioPlayer _player = AudioPlayer();
   final ValueNotifier<bool> isPlaying = ValueNotifier(false);
+  final ValueNotifier<bool> isBuffering = ValueNotifier(false);
   final ValueNotifier<Duration> position = ValueNotifier(Duration.zero);
   final ValueNotifier<Duration> duration = ValueNotifier(Duration.zero);
   final ValueNotifier<double> stimulationLevel = ValueNotifier(1.0);
@@ -21,6 +23,7 @@ class AudioService {
   final ValueNotifier<int> historyUpdate = ValueNotifier(0);
   final ValueNotifier<List<Session>> queue = ValueNotifier([]);
   final ValueNotifier<int> queueIndex = ValueNotifier(-1);
+  final ValueNotifier<bool> hasActiveSession = ValueNotifier(false);
 
   bool _isInitialized = false;
   Session? _pendingSession;
@@ -49,6 +52,9 @@ class AudioService {
     });
 
     _player.processingStateStream.listen((state) {
+      isBuffering.value =
+          state == ProcessingState.loading ||
+          state == ProcessingState.buffering;
       if (state == ProcessingState.completed) {
         _onSessionComplete();
       }
@@ -68,21 +74,19 @@ class AudioService {
 
   Future<void> loadSession(Session session) async {
     try {
+      isBuffering.value = true;
       await persistFocusTime();
       currentSession.value = session;
       _pendingSession = session;
 
-      if (session.isPersonal && session.localPath != null) {
-        await _player.setFilePath(session.localPath!);
-      } else if (session.assetPath != null && session.assetPath!.isNotEmpty) {
-        await _player.setAsset(session.assetPath!);
-      } else if (session.audioUrl.isNotEmpty) {
-        await _player.setUrl(session.audioUrl);
-      } else {
+      final didLoadSource = await _loadAudioSource(session);
+      if (!didLoadSource) {
+        isBuffering.value = false;
         debugPrint("Error: No audio source for session ${session.id}");
         return;
       }
 
+      hasActiveSession.value = true;
       await _player.setVolume(stimulationLevel.value);
       await _player.play();
       _startFocusTrackingFor(session);
@@ -91,8 +95,90 @@ class AudioService {
       await StorageService.instance.saveRecentSession(session);
       historyUpdate.value++;
     } catch (e) {
+      isBuffering.value = false;
       debugPrint("Error loading session: $e");
     }
+  }
+
+  Future<bool> _loadAudioSource(Session session) async {
+    final mediaItem = _mediaItemFor(session);
+
+    if (session.isPersonal && session.localPath != null) {
+      await _player.setAudioSource(
+        AudioSource.file(session.localPath!, tag: mediaItem),
+      );
+      return true;
+    }
+
+    if (session.audioUrl.isNotEmpty) {
+      await _player.setAudioSource(
+        AudioSource.uri(Uri.parse(session.audioUrl), tag: mediaItem),
+      );
+      return true;
+    }
+
+    final assetPath = session.assetPath;
+    if (assetPath == null || assetPath.isEmpty) {
+      return false;
+    }
+
+    if (_isRemoteUrl(assetPath)) {
+      await _player.setAudioSource(
+        AudioSource.uri(Uri.parse(assetPath), tag: mediaItem),
+      );
+    } else {
+      await _player.setAudioSource(
+        AudioSource.asset(assetPath, tag: mediaItem),
+      );
+    }
+    return true;
+  }
+
+  audio_service.MediaItem _mediaItemFor(Session session) {
+    return audio_service.MediaItem(
+      id: _mediaIdFor(session),
+      album: 'NeuroFlow',
+      title: session.title,
+      artist: session.genre,
+      artUri: _artUriFor(session.imageUrl),
+      duration: duration.value == Duration.zero ? null : duration.value,
+      extras: {'sessionId': session.id, 'state': session.state.name},
+    );
+  }
+
+  String _mediaIdFor(Session session) {
+    if (session.localPath != null && session.localPath!.isNotEmpty) {
+      return session.localPath!;
+    }
+    if (session.audioUrl.isNotEmpty) {
+      return session.audioUrl;
+    }
+    return session.assetPath ?? session.id;
+  }
+
+  Uri? _artUriFor(String imageUrl) {
+    if (imageUrl.isEmpty) return null;
+
+    final parsed = Uri.tryParse(imageUrl);
+    if (parsed != null && parsed.hasAbsolutePath) {
+      if (parsed.scheme == 'http' || parsed.scheme == 'https') {
+        return parsed;
+      }
+      if (parsed.scheme == 'file') {
+        return parsed;
+      }
+    }
+
+    if (imageUrl.startsWith('/')) {
+      return Uri.file(imageUrl);
+    }
+
+    return null;
+  }
+
+  bool _isRemoteUrl(String value) {
+    final uri = Uri.tryParse(value);
+    return uri?.scheme == 'http' || uri?.scheme == 'https';
   }
 
   Future<void> playTrack(String url) async {
@@ -112,9 +198,16 @@ class AudioService {
     }
   }
 
+  Future<void> pause() async {
+    await _player.pause();
+    await persistFocusTime();
+    isPlaying.value = false;
+  }
+
   Future<void> stop() async {
     await _player.stop();
     await persistFocusTime();
+    hasActiveSession.value = false;
     isPlaying.value = false;
   }
 
@@ -238,6 +331,7 @@ class AudioService {
     await persistFocusTime();
     await _player.dispose();
     isPlaying.dispose();
+    isBuffering.dispose();
     position.dispose();
     duration.dispose();
     stimulationLevel.dispose();
@@ -245,5 +339,6 @@ class AudioService {
     historyUpdate.dispose();
     queue.dispose();
     queueIndex.dispose();
+    hasActiveSession.dispose();
   }
 }

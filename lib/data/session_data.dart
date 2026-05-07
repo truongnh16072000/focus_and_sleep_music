@@ -1,6 +1,10 @@
 import '../models/session.dart';
 
 class SessionData {
+  static const String mediaBaseUrl = "https://htlabsapp.io.vn/media";
+
+  static String _mediaUrl(String path) => "$mediaBaseUrl/$path";
+
   static final List<Session> deepWork = [
     Session(
       id: "deep_work_1",
@@ -8,8 +12,8 @@ class SessionData {
       description: "Maximum focus for complex tasks",
       genre: "Deep Work",
       state: MentalState.focus,
-      assetPath: "assets/audio/deepwork/deepwork_1.mp3",
-      imageUrl: "assets/images/sessions/deep_work_1.png",
+      audioUrl: _mediaUrl("audio/deepwork/deepwork_1.mp3"),
+      imageUrl: _mediaUrl("images/sessions/deep_work_1.webp"),
       tags: ["Focus", "Deep Work"],
     ),
     Session(
@@ -18,8 +22,8 @@ class SessionData {
       description: "Intense concentration music",
       genre: "Deep Work",
       state: MentalState.focus,
-      assetPath: "assets/audio/deepwork/deepwork_2.mp3",
-      imageUrl: "assets/images/sessions/deep_work_2.png",
+      audioUrl: _mediaUrl("audio/deepwork/deepwork_2.mp3"),
+      imageUrl: _mediaUrl("images/sessions/deep_work_2.webp"),
       tags: ["Focus", "Deep Work"],
     ),
     Session(
@@ -28,8 +32,8 @@ class SessionData {
       description: "Flow state activation",
       genre: "Deep Work",
       state: MentalState.focus,
-      assetPath: "assets/audio/deepwork/deepwork_3.mp3",
-      imageUrl: "assets/images/sessions/deep_work_3.png",
+      audioUrl: _mediaUrl("audio/deepwork/deepwork_3.mp3"),
+      imageUrl: _mediaUrl("images/sessions/deep_work_3.webp"),
       tags: ["Focus", "Flow"],
     ),
     Session(
@@ -38,8 +42,8 @@ class SessionData {
       description: "Productivity booster",
       genre: "Deep Work",
       state: MentalState.focus,
-      assetPath: "assets/audio/deepwork/deepwork_4.mp3",
-      imageUrl: "assets/images/sessions/deep_work_4.png",
+      audioUrl: _mediaUrl("audio/deepwork/deepwork_4.mp3"),
+      imageUrl: _mediaUrl("images/sessions/deep_work_4.webp"),
       tags: ["Focus", "Productivity"],
     ),
     Session(
@@ -48,8 +52,8 @@ class SessionData {
       description: "Sustained attention track",
       genre: "Deep Work",
       state: MentalState.focus,
-      assetPath: "assets/audio/deepwork/deepwork_5.mp3",
-      imageUrl: "assets/images/sessions/deep_work_5.png",
+      audioUrl: _mediaUrl("audio/deepwork/deepwork_5.mp3"),
+      imageUrl: _mediaUrl("images/sessions/deep_work_5.webp"),
       tags: ["Focus", "Attention"],
     ),
     Session(
@@ -58,8 +62,8 @@ class SessionData {
       description: "Complex problem solving",
       genre: "Deep Work",
       state: MentalState.focus,
-      assetPath: "assets/audio/deepwork/deepwork_6.mp3",
-      imageUrl: "assets/images/sessions/deep_work_6.png",
+      audioUrl: _mediaUrl("audio/deepwork/deepwork_6.mp3"),
+      imageUrl: _mediaUrl("images/sessions/deep_work_6.webp"),
       tags: ["Focus", "Problem Solving"],
     ),
     Session(
@@ -68,8 +72,8 @@ class SessionData {
       description: "Cognitive enhancement",
       genre: "Deep Work",
       state: MentalState.focus,
-      assetPath: "assets/audio/deepwork/deepwork_7.mp3",
-      imageUrl: "assets/images/sessions/deep_work_7.png",
+      audioUrl: _mediaUrl("audio/deepwork/deepwork_7.mp3"),
+      imageUrl: _mediaUrl("images/sessions/deep_work_7.webp"),
       tags: ["Focus", "Cognitive"],
     ),
     Session(
@@ -78,8 +82,8 @@ class SessionData {
       description: "Mental clarity boost",
       genre: "Deep Work",
       state: MentalState.focus,
-      assetPath: "assets/audio/deepwork/deepwork_8.mp3",
-      imageUrl: "assets/images/sessions/deep_work_8.png",
+      audioUrl: _mediaUrl("audio/deepwork/deepwork_8.mp3"),
+      imageUrl: _mediaUrl("images/sessions/deep_work_8.webp"),
       tags: ["Focus", "Clarity"],
     ),
     Session(
@@ -88,8 +92,8 @@ class SessionData {
       description: "Distraction-free zone",
       genre: "Deep Work",
       state: MentalState.focus,
-      assetPath: "assets/audio/deepwork/deepwork_9.mp3",
-      imageUrl: "assets/images/sessions/deep_work_9.png",
+      audioUrl: _mediaUrl("audio/deepwork/deepwork_9.mp3"),
+      imageUrl: _mediaUrl("images/sessions/deep_work_9.webp"),
       tags: ["Focus", "Distraction-Free"],
     ),
     Session(
@@ -98,8 +102,8 @@ class SessionData {
       description: "Peak performance mode",
       genre: "Deep Work",
       state: MentalState.focus,
-      assetPath: "assets/audio/deepwork/deepwork_10.mp3",
-      imageUrl: "assets/images/sessions/deep_work_10.png",
+      audioUrl: _mediaUrl("audio/deepwork/deepwork_10.mp3"),
+      imageUrl: _mediaUrl("images/sessions/deep_work_10.webp"),
       tags: ["Focus", "Peak Performance"],
     ),
   ];
@@ -111,8 +115,8 @@ class SessionData {
       description: "Unlock your imagination",
       genre: "Creative",
       state: MentalState.focus,
-      assetPath: "assets/audio/creative/creative_1.mp3",
-      imageUrl: "assets/images/sessions/creative_1.png",
+      audioUrl: _mediaUrl("audio/creative/creative_1.mp3"),
+      imageUrl: _mediaUrl("images/sessions/creative_1.webp"),
       tags: ["Focus", "Creative"],
     ),
     Session(
@@ -121,8 +125,8 @@ class SessionData {
       description: "Artistic flow state",
       genre: "Creative",
       state: MentalState.focus,
-      assetPath: "assets/audio/creative/creative_2.mp3",
-      imageUrl: "assets/images/sessions/creative_2.png",
+      audioUrl: _mediaUrl("audio/creative/creative_2.mp3"),
+      imageUrl: _mediaUrl("images/sessions/creative_2.webp"),
       tags: ["Focus", "Creative"],
     ),
     Session(
@@ -131,8 +135,8 @@ class SessionData {
       description: "Inspiration activation",
       genre: "Creative",
       state: MentalState.focus,
-      assetPath: "assets/audio/creative/creative_3.mp3",
-      imageUrl: "assets/images/sessions/creative_3.png",
+      audioUrl: _mediaUrl("audio/creative/creative_3.mp3"),
+      imageUrl: _mediaUrl("images/sessions/creative_3.webp"),
       tags: ["Focus", "Creative"],
     ),
     Session(
@@ -141,8 +145,8 @@ class SessionData {
       description: "Design thinking mode",
       genre: "Creative",
       state: MentalState.focus,
-      assetPath: "assets/audio/creative/creative_4.mp3",
-      imageUrl: "assets/images/sessions/creative_4.png",
+      audioUrl: _mediaUrl("audio/creative/creative_4.mp3"),
+      imageUrl: _mediaUrl("images/sessions/creative_4.webp"),
       tags: ["Focus", "Creative"],
     ),
     Session(
@@ -151,8 +155,8 @@ class SessionData {
       description: "Brainstorming energy",
       genre: "Creative",
       state: MentalState.focus,
-      assetPath: "assets/audio/creative/creative_5.mp3",
-      imageUrl: "assets/images/sessions/creative_5.png",
+      audioUrl: _mediaUrl("audio/creative/creative_5.mp3"),
+      imageUrl: _mediaUrl("images/sessions/creative_5.webp"),
       tags: ["Focus", "Creative"],
     ),
     Session(
@@ -161,8 +165,8 @@ class SessionData {
       description: "Innovative thinking",
       genre: "Creative",
       state: MentalState.focus,
-      assetPath: "assets/audio/creative/creative_6.mp3",
-      imageUrl: "assets/images/sessions/creative_6.png",
+      audioUrl: _mediaUrl("audio/creative/creative_6.mp3"),
+      imageUrl: _mediaUrl("images/sessions/creative_6.webp"),
       tags: ["Focus", "Creative"],
     ),
     Session(
@@ -171,8 +175,8 @@ class SessionData {
       description: "Original ideas flow",
       genre: "Creative",
       state: MentalState.focus,
-      assetPath: "assets/audio/creative/creative_7.mp3",
-      imageUrl: "assets/images/sessions/creative_7.png",
+      audioUrl: _mediaUrl("audio/creative/creative_7.mp3"),
+      imageUrl: _mediaUrl("images/sessions/creative_7.webp"),
       tags: ["Focus", "Creative"],
     ),
     Session(
@@ -181,8 +185,8 @@ class SessionData {
       description: "Visual thinking boost",
       genre: "Creative",
       state: MentalState.focus,
-      assetPath: "assets/audio/creative/creative_8.mp3",
-      imageUrl: "assets/images/sessions/creative_8.png",
+      audioUrl: _mediaUrl("audio/creative/creative_8.mp3"),
+      imageUrl: _mediaUrl("images/sessions/creative_8.webp"),
       tags: ["Focus", "Creative"],
     ),
     Session(
@@ -191,8 +195,8 @@ class SessionData {
       description: "Expressive mode",
       genre: "Creative",
       state: MentalState.focus,
-      assetPath: "assets/audio/creative/creative_9.mp3",
-      imageUrl: "assets/images/sessions/creative_9.png",
+      audioUrl: _mediaUrl("audio/creative/creative_9.mp3"),
+      imageUrl: _mediaUrl("images/sessions/creative_9.webp"),
       tags: ["Focus", "Creative"],
     ),
     Session(
@@ -201,8 +205,8 @@ class SessionData {
       description: "Artistic mastery",
       genre: "Creative",
       state: MentalState.focus,
-      assetPath: "assets/audio/creative/creative_10.mp3",
-      imageUrl: "assets/images/sessions/creative_10.png",
+      audioUrl: _mediaUrl("audio/creative/creative_10.mp3"),
+      imageUrl: _mediaUrl("images/sessions/creative_10.webp"),
       tags: ["Focus", "Creative"],
     ),
   ];
@@ -214,8 +218,8 @@ class SessionData {
       description: "Optimized for long-term memory",
       genre: "Study",
       state: MentalState.focus,
-      assetPath: "assets/audio/study/study_1.mp3",
-      imageUrl: "assets/images/sessions/study_1.png",
+      audioUrl: _mediaUrl("audio/study/study_1.mp3"),
+      imageUrl: _mediaUrl("images/sessions/study_1.webp"),
       tags: ["Focus", "Study"],
     ),
     Session(
@@ -224,8 +228,8 @@ class SessionData {
       description: "Perfect for intense reading",
       genre: "Study",
       state: MentalState.focus,
-      assetPath: "assets/audio/study/study_2.mp3",
-      imageUrl: "assets/images/sessions/study_2.png",
+      audioUrl: _mediaUrl("audio/study/study_2.mp3"),
+      imageUrl: _mediaUrl("images/sessions/study_2.webp"),
       tags: ["Focus", "Study"],
     ),
     Session(
@@ -234,8 +238,8 @@ class SessionData {
       description: "Deep understanding mode",
       genre: "Study",
       state: MentalState.focus,
-      assetPath: "assets/audio/study/study_3.mp3",
-      imageUrl: "assets/images/sessions/study_3.png",
+      audioUrl: _mediaUrl("audio/study/study_3.mp3"),
+      imageUrl: _mediaUrl("images/sessions/study_3.webp"),
       tags: ["Focus", "Study"],
     ),
     Session(
@@ -244,8 +248,8 @@ class SessionData {
       description: "Quiet contemplation beats",
       genre: "Study",
       state: MentalState.focus,
-      assetPath: "assets/audio/study/study_4.mp3",
-      imageUrl: "assets/images/sessions/study_4.png",
+      audioUrl: _mediaUrl("audio/study/study_4.mp3"),
+      imageUrl: _mediaUrl("images/sessions/study_4.webp"),
       tags: ["Focus", "Study"],
     ),
     Session(
@@ -254,8 +258,8 @@ class SessionData {
       description: "Peak cognitive endurance",
       genre: "Study",
       state: MentalState.focus,
-      assetPath: "assets/audio/study/study_5.mp3",
-      imageUrl: "assets/images/sessions/study_5.png",
+      audioUrl: _mediaUrl("audio/study/study_5.mp3"),
+      imageUrl: _mediaUrl("images/sessions/study_5.webp"),
       tags: ["Focus", "Study"],
     ),
     Session(
@@ -264,8 +268,8 @@ class SessionData {
       description: "Structured thought patterns",
       genre: "Study",
       state: MentalState.focus,
-      assetPath: "assets/audio/study/study_6.mp3",
-      imageUrl: "assets/images/sessions/study_6.png",
+      audioUrl: _mediaUrl("audio/study/study_6.mp3"),
+      imageUrl: _mediaUrl("images/sessions/study_6.webp"),
       tags: ["Focus", "Study"],
     ),
     Session(
@@ -274,8 +278,8 @@ class SessionData {
       description: "Enhanced learning state",
       genre: "Study",
       state: MentalState.focus,
-      assetPath: "assets/audio/study/study_7.mp3",
-      imageUrl: "assets/images/sessions/study_7.png",
+      audioUrl: _mediaUrl("audio/study/study_7.mp3"),
+      imageUrl: _mediaUrl("images/sessions/study_7.webp"),
       tags: ["Focus", "Study"],
     ),
     Session(
@@ -284,8 +288,8 @@ class SessionData {
       description: "Scientific focus frequencies",
       genre: "Study",
       state: MentalState.focus,
-      assetPath: "assets/audio/study/study_8.mp3",
-      imageUrl: "assets/images/sessions/study_8.png",
+      audioUrl: _mediaUrl("audio/study/study_8.mp3"),
+      imageUrl: _mediaUrl("images/sessions/study_8.webp"),
       tags: ["Focus", "Study"],
     ),
     Session(
@@ -294,8 +298,8 @@ class SessionData {
       description: "Brainwave synchronization",
       genre: "Study",
       state: MentalState.focus,
-      assetPath: "assets/audio/study/study_9.mp3",
-      imageUrl: "assets/images/sessions/study_9.png",
+      audioUrl: _mediaUrl("audio/study/study_9.mp3"),
+      imageUrl: _mediaUrl("images/sessions/study_9.webp"),
       tags: ["Focus", "Study"],
     ),
     Session(
@@ -304,8 +308,8 @@ class SessionData {
       description: "Efficient information retention",
       genre: "Study",
       state: MentalState.focus,
-      assetPath: "assets/audio/study/study_10.mp3",
-      imageUrl: "assets/images/sessions/study_10.png",
+      audioUrl: _mediaUrl("audio/study/study_10.mp3"),
+      imageUrl: _mediaUrl("images/sessions/study_10.webp"),
       tags: ["Focus", "Study"],
     ),
   ];
@@ -317,8 +321,8 @@ class SessionData {
       description: "Pure engineering focus",
       genre: "Coding",
       state: MentalState.focus,
-      assetPath: "assets/audio/coding/coding_1.mp3",
-      imageUrl: "assets/images/sessions/coding_1.png",
+      audioUrl: _mediaUrl("audio/coding/coding_1.mp3"),
+      imageUrl: _mediaUrl("images/sessions/coding_1.webp"),
       tags: ["Focus", "Coding"],
     ),
     Session(
@@ -327,8 +331,8 @@ class SessionData {
       description: "Clean code rhythms",
       genre: "Coding",
       state: MentalState.focus,
-      assetPath: "assets/audio/coding/coding_2.mp3",
-      imageUrl: "assets/images/sessions/coding_2.png",
+      audioUrl: _mediaUrl("audio/coding/coding_2.mp3"),
+      imageUrl: _mediaUrl("images/sessions/coding_2.webp"),
       tags: ["Focus", "Coding"],
     ),
     Session(
@@ -337,8 +341,8 @@ class SessionData {
       description: "Minimalist coding beats",
       genre: "Coding",
       state: MentalState.focus,
-      assetPath: "assets/audio/coding/coding_3.mp3",
-      imageUrl: "assets/images/sessions/coding_3.png",
+      audioUrl: _mediaUrl("audio/coding/coding_3.mp3"),
+      imageUrl: _mediaUrl("images/sessions/coding_3.webp"),
       tags: ["Focus", "Coding"],
     ),
     Session(
@@ -347,8 +351,8 @@ class SessionData {
       description: "Mathematical precision",
       genre: "Coding",
       state: MentalState.focus,
-      assetPath: "assets/audio/coding/coding_4.mp3",
-      imageUrl: "assets/images/sessions/coding_4.png",
+      audioUrl: _mediaUrl("audio/coding/coding_4.mp3"),
+      imageUrl: _mediaUrl("images/sessions/coding_4.webp"),
       tags: ["Focus", "Coding"],
     ),
     Session(
@@ -357,8 +361,8 @@ class SessionData {
       description: "Intense problem solving",
       genre: "Coding",
       state: MentalState.focus,
-      assetPath: "assets/audio/coding/coding_5.mp3",
-      imageUrl: "assets/images/sessions/coding_5.png",
+      audioUrl: _mediaUrl("audio/coding/coding_5.mp3"),
+      imageUrl: _mediaUrl("images/sessions/coding_5.webp"),
       tags: ["Focus", "Coding"],
     ),
     Session(
@@ -367,8 +371,8 @@ class SessionData {
       description: "Digital flow state",
       genre: "Coding",
       state: MentalState.focus,
-      assetPath: "assets/audio/coding/coding_6.mp3",
-      imageUrl: "assets/images/sessions/coding_6.png",
+      audioUrl: _mediaUrl("audio/coding/coding_6.mp3"),
+      imageUrl: _mediaUrl("images/sessions/coding_6.webp"),
       tags: ["Focus", "Coding"],
     ),
     Session(
@@ -377,8 +381,8 @@ class SessionData {
       description: "Structured thinking",
       genre: "Coding",
       state: MentalState.focus,
-      assetPath: "assets/audio/coding/coding_7.mp3",
-      imageUrl: "assets/images/sessions/coding_7.png",
+      audioUrl: _mediaUrl("audio/coding/coding_7.mp3"),
+      imageUrl: _mediaUrl("images/sessions/coding_7.webp"),
       tags: ["Focus", "Coding"],
     ),
     Session(
@@ -387,8 +391,8 @@ class SessionData {
       description: "Error-free concentration",
       genre: "Coding",
       state: MentalState.focus,
-      assetPath: "assets/audio/coding/coding_8.mp3",
-      imageUrl: "assets/images/sessions/coding_8.png",
+      audioUrl: _mediaUrl("audio/coding/coding_8.mp3"),
+      imageUrl: _mediaUrl("images/sessions/coding_8.webp"),
       tags: ["Focus", "Coding"],
     ),
     Session(
@@ -397,8 +401,8 @@ class SessionData {
       description: "Command line clarity",
       genre: "Coding",
       state: MentalState.focus,
-      assetPath: "assets/audio/coding/coding_9.mp3",
-      imageUrl: "assets/images/sessions/coding_9.png",
+      audioUrl: _mediaUrl("audio/coding/coding_9.mp3"),
+      imageUrl: _mediaUrl("images/sessions/coding_9.webp"),
       tags: ["Focus", "Coding"],
     ),
     Session(
@@ -407,8 +411,8 @@ class SessionData {
       description: "High-performance engineering",
       genre: "Coding",
       state: MentalState.focus,
-      assetPath: "assets/audio/coding/coding_10.mp3",
-      imageUrl: "assets/images/sessions/coding_10.png",
+      audioUrl: _mediaUrl("audio/coding/coding_10.mp3"),
+      imageUrl: _mediaUrl("images/sessions/coding_10.webp"),
       tags: ["Focus", "Coding"],
     ),
   ];
@@ -417,7 +421,7 @@ class SessionData {
     ...deepWork,
     ...creative,
     ...study,
-    ...coding
+    ...coding,
   ];
 
   static final List<CategoryGroup> categories = [

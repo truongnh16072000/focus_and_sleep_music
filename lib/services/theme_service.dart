@@ -37,6 +37,8 @@ class ThemeService extends ChangeNotifier {
   }
 
   Future<void> setThemeMode(AppThemeMode mode) async {
+    if (_themeMode == mode) return;
+
     _themeMode = mode;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('theme_mode', mode.name);

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/session.dart';
+import '../utils/session_image.dart';
 
 class Track {
   final String id;
@@ -18,12 +19,12 @@ class Track {
     required this.title,
     this.description = '',
     required this.genre,
-    required this.imageUrl,
+    required String imageUrl,
     this.audioUrl = '',
     this.assetPath,
     this.isPersonal = false,
     this.localPath,
-  });
+  }) : imageUrl = normalizeSessionImageUrl(imageUrl, sessionId: id);
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -103,12 +104,13 @@ class StorageService {
   static const String _lastSessionDateKey = 'last_session_date';
   static const String _totalSessionsKey = 'total_sessions';
   static const String _focusSessionRecordsKey = 'focus_session_records';
-  static const String _focusScreenLockEnabledKey = 'focus_screen_lock_enabled';
+  static const String _timerSettingsKey = 'timer_settings';
 
   SharedPreferences? _prefs;
 
   Future<void> init() async {
     _prefs ??= await SharedPreferences.getInstance();
+    await _migrateStoredSessionImages();
   }
 
   SharedPreferences get _safePrefs {
@@ -233,12 +235,60 @@ class StorageService {
         .toList();
   }
 
-  bool isFocusScreenLockEnabled() {
-    return _safePrefs.getBool(_focusScreenLockEnabledKey) ?? false;
+  Future<void> saveTimerSettings(TimerSettings settings) async {
+    await _safePrefs.setString(
+      _timerSettingsKey,
+      jsonEncode(settings.toJson()),
+    );
   }
 
-  Future<void> setFocusScreenLockEnabled(bool enabled) async {
-    await _safePrefs.setBool(_focusScreenLockEnabledKey, enabled);
+  Future<TimerSettings> getTimerSettings() async {
+    final String? json = _safePrefs.getString(_timerSettingsKey);
+    if (json == null) return TimerSettings();
+    try {
+      return TimerSettings.fromJson(jsonDecode(json));
+    } catch (e) {
+      return TimerSettings();
+    }
+  }
+
+  Future<void> _migrateStoredSessionImages() async {
+    final prefs = _safePrefs;
+    await _normalizeImageUrlsForKey(prefs, _savedTracksKey);
+    await _normalizeImageUrlsForKey(prefs, _personalSessionsKey);
+    await _normalizeImageUrlsForKey(prefs, _recentSessionsKey);
+  }
+
+  Future<void> _normalizeImageUrlsForKey(
+    SharedPreferences prefs,
+    String key,
+  ) async {
+    final values = prefs.getStringList(key);
+    if (values == null || values.isEmpty) return;
+
+    var changed = false;
+    final normalized = values.map((value) {
+      try {
+        final decoded = jsonDecode(value);
+        if (decoded is! Map<String, dynamic>) return value;
+
+        final imageUrl = decoded['imageUrl'] as String? ?? '';
+        final normalizedImageUrl = normalizeSessionImageUrl(
+          imageUrl,
+          sessionId: decoded['id'] as String?,
+        );
+        if (normalizedImageUrl == imageUrl) return value;
+
+        changed = true;
+        return jsonEncode({...decoded, 'imageUrl': normalizedImageUrl});
+      } catch (_) {
+        return value;
+      }
+    }).toList();
+
+    if (changed) {
+      await prefs.setStringList(key, normalized);
+    }
   }
 
   Future<void> _updateStreak() async {

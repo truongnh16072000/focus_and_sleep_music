@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../data/session_data.dart';
 import '../services/audio_service.dart';
 import '../models/session.dart';
+import '../utils/session_image.dart';
 import 'player_screen.dart';
 
 class PrimaryFlowScreen extends StatefulWidget {
@@ -73,7 +75,9 @@ class _PrimaryFlowScreenState extends State<PrimaryFlowScreen>
           controller: _tabController,
           isScrollable: true,
           labelColor: theme.colorScheme.primary,
-          unselectedLabelColor: theme.colorScheme.onSurface.withOpacity(0.6),
+          unselectedLabelColor: theme.colorScheme.onSurface.withValues(
+            alpha: 0.6,
+          ),
           indicatorColor: theme.colorScheme.primary,
           indicatorWeight: 3,
           labelStyle: GoogleFonts.montserrat(
@@ -99,7 +103,9 @@ class _PrimaryFlowScreenState extends State<PrimaryFlowScreen>
       return Center(
         child: Text(
           'No sessions available.',
-          style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6)),
+          style: TextStyle(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
         ),
       );
     }
@@ -116,6 +122,10 @@ class _PrimaryFlowScreenState extends State<PrimaryFlowScreen>
 
   Widget _buildSessionCard(Session session, int index, ThemeData theme) {
     final isDark = theme.brightness == Brightness.dark;
+    final imageUrl = normalizeSessionImageUrl(
+      session.imageUrl,
+      sessionId: session.id,
+    );
     return GestureDetector(
       onTap: () {
         AudioService.instance.loadSession(session);
@@ -133,7 +143,7 @@ class _PrimaryFlowScreenState extends State<PrimaryFlowScreen>
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+              color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -148,30 +158,17 @@ class _PrimaryFlowScreenState extends State<PrimaryFlowScreen>
               child: Container(
                 width: 72,
                 height: 72,
-                color: theme.colorScheme.surfaceVariant,
-                child: session.imageUrl.startsWith('assets/')
-                    ? Image.asset(
-                        session.imageUrl,
+                color: theme.colorScheme.surfaceContainerHighest,
+                child: isOnlineImageUrl(imageUrl)
+                    ? CachedNetworkImage(
+                        imageUrl: imageUrl,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Icon(
-                            Icons.music_note,
-                            color: theme.colorScheme.primary,
-                            size: 28,
-                          );
-                        },
+                        placeholder: (context, url) =>
+                            _buildImagePlaceholder(theme),
+                        errorWidget: (context, url, error) =>
+                            _buildImagePlaceholder(theme),
                       )
-                    : Image.network(
-                        session.imageUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Icon(
-                            Icons.music_note,
-                            color: theme.colorScheme.primary,
-                            size: 28,
-                          );
-                        },
-                      ),
+                    : _buildImagePlaceholder(theme),
               ),
             ),
             Expanded(
@@ -197,7 +194,9 @@ class _PrimaryFlowScreenState extends State<PrimaryFlowScreen>
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: theme.colorScheme.onSurface.withOpacity(0.6),
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.6,
+                        ),
                         fontSize: 13,
                       ),
                     ),
@@ -212,8 +211,8 @@ class _PrimaryFlowScreenState extends State<PrimaryFlowScreen>
                               vertical: 3,
                             ),
                             decoration: BoxDecoration(
-                              color: theme.colorScheme.primary.withOpacity(
-                                0.15,
+                              color: theme.colorScheme.primary.withValues(
+                                alpha: 0.15,
                               ),
                               borderRadius: BorderRadius.circular(8),
                             ),
@@ -237,7 +236,9 @@ class _PrimaryFlowScreenState extends State<PrimaryFlowScreen>
               padding: const EdgeInsets.only(right: 16),
               child: CircleAvatar(
                 radius: 18,
-                backgroundColor: theme.colorScheme.primary.withOpacity(0.15),
+                backgroundColor: theme.colorScheme.primary.withValues(
+                  alpha: 0.15,
+                ),
                 child: Icon(
                   Icons.play_arrow,
                   color: theme.colorScheme.primary,
@@ -249,5 +250,9 @@ class _PrimaryFlowScreenState extends State<PrimaryFlowScreen>
         ),
       ),
     );
+  }
+
+  Widget _buildImagePlaceholder(ThemeData theme) {
+    return Icon(Icons.music_note, color: theme.colorScheme.primary, size: 28);
   }
 }

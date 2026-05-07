@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:just_audio_background/just_audio_background.dart';
 import 'theme/app_theme.dart';
 import 'services/audio_service.dart';
 import 'services/storage_service.dart';
 import 'services/theme_service.dart';
-import 'services/focus_session_lock_service.dart';
 import 'screens/main_navigation.dart';
 import 'screens/onboarding_screen.dart';
 
@@ -11,9 +11,13 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await StorageService.instance.init();
+  await JustAudioBackground.init(
+    androidNotificationChannelId: 'com.neuroflow.audio',
+    androidNotificationChannelName: 'NeuroFlow playback',
+    androidNotificationOngoing: true,
+  );
   await AudioService.instance.init();
   await ThemeService.instance.init();
-  await FocusSessionLockService.instance.init();
   final bool onboardingComplete = await StorageService().isOnboardingComplete();
 
   runApp(NeuroFlowApp(onboardingComplete: onboardingComplete));
@@ -34,19 +38,13 @@ class _NeuroFlowAppState extends State<NeuroFlowApp>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    ThemeService.instance.addListener(_onThemeChanged);
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    ThemeService.instance.removeListener(_onThemeChanged);
     AudioService.instance.dispose();
     super.dispose();
-  }
-
-  void _onThemeChanged() {
-    setState(() {});
   }
 
   @override
@@ -58,15 +56,20 @@ class _NeuroFlowAppState extends State<NeuroFlowApp>
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'NeuroFlow',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: _themeModeForApp(ThemeService.instance.themeMode),
-      home: widget.onboardingComplete
-          ? const MainNavigation()
-          : const OnboardingScreen(),
+    return AnimatedBuilder(
+      animation: ThemeService.instance,
+      builder: (context, _) {
+        return MaterialApp(
+          title: 'NeuroFlow',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: _themeModeForApp(ThemeService.instance.themeMode),
+          home: widget.onboardingComplete
+              ? const MainNavigation()
+              : const OnboardingScreen(),
+        );
+      },
     );
   }
 

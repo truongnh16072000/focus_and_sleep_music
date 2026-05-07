@@ -68,54 +68,72 @@ class _AnalystScreenState extends State<AnalystScreen> {
     final weekFocusMinutes = days.fold<int>(0, (sum, day) => sum + day.minutes);
     final bestGenre = _bestGenreLabel();
 
-    return Scaffold(
-      appBar: AppBar(
-        toolbarHeight: 48,
-        title: Text(
-          "Analyst",
-          style: GoogleFonts.montserrat(
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded, size: 20),
-            onPressed: _loadAnalytics,
-            tooltip: "Refresh analytics",
-          ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _loadAnalytics,
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildHeroSummary(theme, weekFocusMinutes),
-                    const SizedBox(height: 16),
-                    _buildStatGrid(
-                      theme,
-                      totalFocusMinutes: totalFocusMinutes,
-                      weekFocusMinutes: weekFocusMinutes,
-                      bestGenre: bestGenre,
-                    ),
-                    const SizedBox(height: 24),
-                    _buildWeeklyChart(theme, days),
-                    const SizedBox(height: 24),
-                    _buildFocusMix(theme),
-                    const SizedBox(height: 24),
-                    _buildStreakCard(theme),
-                    const SizedBox(height: 24),
-                    _buildInsightCard(theme, days, bestGenre),
-                  ],
+    return DecoratedBox(
+      decoration: _screenDecoration(theme),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : RefreshIndicator(
+                onRefresh: _loadAnalytics,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 56, 24, 16),
+                        child: Text(
+                          "Analyst",
+                          style: GoogleFonts.montserrat(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildHeroSummary(theme, weekFocusMinutes),
+                            const SizedBox(height: 16),
+                            _buildStatGrid(
+                              theme,
+                              totalFocusMinutes: totalFocusMinutes,
+                              weekFocusMinutes: weekFocusMinutes,
+                              bestGenre: bestGenre,
+                            ),
+                            const SizedBox(height: 24),
+                            _buildWeeklyChart(theme, days),
+                            const SizedBox(height: 24),
+                            _buildFocusMix(theme),
+                            const SizedBox(height: 24),
+                            _buildStreakCard(theme),
+                            const SizedBox(height: 24),
+                            _buildInsightCard(theme, days, bestGenre),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
+      ),
+    );
+  }
+
+  BoxDecoration _screenDecoration(ThemeData theme) {
+    if (theme.brightness == Brightness.light) {
+      return const BoxDecoration(color: Color(0xFFF6F2F7));
+    }
+
+    return const BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFF201024), Color(0xFF13131F), Color(0xFF07070C)],
+      ),
     );
   }
 

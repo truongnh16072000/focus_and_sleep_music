@@ -44,8 +44,14 @@ class AppTheme {
           fontWeight: FontWeight.w600,
           color: lightTextMain,
         ).copyWith(inherit: true),
-        bodyLarge: GoogleFonts.inter(fontSize: 16, color: lightTextMain).copyWith(inherit: true),
-        bodyMedium: GoogleFonts.inter(fontSize: 14, color: lightTextMain).copyWith(inherit: true),
+        bodyLarge: GoogleFonts.inter(
+          fontSize: 16,
+          color: lightTextMain,
+        ).copyWith(inherit: true),
+        bodyMedium: GoogleFonts.inter(
+          fontSize: 14,
+          color: lightTextMain,
+        ).copyWith(inherit: true),
         labelMedium: GoogleFonts.inter(
           fontSize: 12,
           fontWeight: FontWeight.w500,
@@ -69,6 +75,11 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: lightTextMain,
           foregroundColor: Colors.white,
+          textStyle: GoogleFonts.montserrat(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.2,
+          ).copyWith(inherit: true),
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
@@ -109,8 +120,14 @@ class AppTheme {
           fontWeight: FontWeight.w600,
           color: darkTextMain,
         ).copyWith(inherit: true),
-        bodyLarge: GoogleFonts.inter(fontSize: 16, color: darkTextMain).copyWith(inherit: true),
-        bodyMedium: GoogleFonts.inter(fontSize: 14, color: darkTextMain).copyWith(inherit: true),
+        bodyLarge: GoogleFonts.inter(
+          fontSize: 16,
+          color: darkTextMain,
+        ).copyWith(inherit: true),
+        bodyMedium: GoogleFonts.inter(
+          fontSize: 14,
+          color: darkTextMain,
+        ).copyWith(inherit: true),
         labelMedium: GoogleFonts.inter(
           fontSize: 12,
           fontWeight: FontWeight.w500,
@@ -140,7 +157,7 @@ class AppTheme {
             fontSize: 16,
             fontWeight: FontWeight.bold,
             letterSpacing: 1.2,
-          ),
+          ).copyWith(inherit: true),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(28),
           ),
