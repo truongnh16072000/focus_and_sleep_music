@@ -19,13 +19,19 @@ class MainNavigation extends StatefulWidget {
 
 class _MainNavigationState extends State<MainNavigation> {
   int _currentIndex = 0;
+  final GlobalKey<CollectionScreenState> _collectionKey = GlobalKey();
 
-  final List<Widget> _screens = const [
-    OverviewScreen(),
-    CollectionScreen(),
-    AnalystScreen(),
-    AccountScreen(),
+  late final List<Widget> _screens = [
+    OverviewScreen(onNavigateToPersonal: _navigateToPersonal),
+    CollectionScreen(key: _collectionKey),
+    const AnalystScreen(),
+    const AccountScreen(),
   ];
+
+  void _navigateToPersonal() {
+    setState(() => _currentIndex = 1);
+    _collectionKey.currentState?.switchToPersonalTab();
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -51,6 +51,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     "It's not about having time, it's about making time.",
   ];
   late String _currentQuote;
+  int _streakCount = 0;
 
   @override
   void initState() {
@@ -70,6 +71,16 @@ class _PlayerScreenState extends State<PlayerScreen>
     };
     _handlePlaybackChanged();
     _checkFavoriteStatus();
+    _loadStreakCount();
+  }
+
+  Future<void> _loadStreakCount() async {
+    final streak = await StorageService.instance.getStreakCount();
+    if (mounted) {
+      setState(() {
+        _streakCount = streak;
+      });
+    }
   }
 
   void _onTimerTick() {
@@ -268,13 +279,13 @@ class _PlayerScreenState extends State<PlayerScreen>
                 child: Row(
                   children: [
                     Icon(
-                      Icons.headphones,
+                      Icons.local_fire_department_rounded,
                       size: 14,
                       color: theme.colorScheme.onSurface,
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      "1",
+                      "$_streakCount",
                       style: TextStyle(
                         color: theme.colorScheme.onSurface,
                         fontSize: 12,

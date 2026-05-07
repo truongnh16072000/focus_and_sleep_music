@@ -17,10 +17,10 @@ class CollectionScreen extends StatefulWidget {
   const CollectionScreen({super.key});
 
   @override
-  State<CollectionScreen> createState() => _CollectionScreenState();
+  State<CollectionScreen> createState() => CollectionScreenState();
 }
 
-class _CollectionScreenState extends State<CollectionScreen> {
+class CollectionScreenState extends State<CollectionScreen> {
   final StorageService _storage = StorageService();
   List<Session> _personalSessions = [];
   List<Session> _recentSessions = [];
@@ -296,7 +296,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
   }
 
   Widget _buildLibraryTrackTile(ThemeData theme, Session session, int index) {
-    final motivation = index.isOdd ? "Motivation" : "Deep Work";
+    final categoryText = session.genre;
 
     return GestureDetector(
       onTap: () => _playSession(session),
@@ -402,7 +402,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
                         _buildFocusPill(theme, isCompact: isCompact),
                         const Spacer(),
                         Text(
-                          motivation,
+                          categoryText,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.inter(
@@ -524,12 +524,67 @@ class _CollectionScreenState extends State<CollectionScreen> {
     );
   }
 
-  void _playSession(Session session) {
+  Future<void> _playSession(Session session) async {
+    if (!session.isPersonal) {
+      try {
+        final result = await InternetAddress.lookup('google.com');
+        if (result.isEmpty || result[0].rawAddress.isEmpty) {
+          throw const SocketException('offline');
+        }
+      } on SocketException catch (_) {
+        if (!mounted) return;
+        _showOfflineDialog();
+        return;
+      }
+    }
+
     AudioService.instance.loadSession(session);
+    if (!mounted) return;
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => PlayerScreen(session: session)),
     ).then((_) => _loadTracks());
+  }
+
+  void _showOfflineDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        final theme = Theme.of(context);
+        return AlertDialog(
+          backgroundColor: theme.colorScheme.surface,
+          title: Text(
+            "You're offline",
+            style: GoogleFonts.montserrat(fontWeight: FontWeight.bold),
+          ),
+          content: Text(
+            "Please check your internet connection to stream online tracks. Would you like to play your downloaded tracks instead?",
+            style: GoogleFonts.inter(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                switchToPersonalTab();
+              },
+              child: const Text("Go to Personal Tracks"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void switchToPersonalTab() {
+    setState(() {
+      _selectedTabIndex = 3;
+    });
   }
 
   Widget _buildEmptySection(ThemeData theme, String message) {

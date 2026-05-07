@@ -12,7 +12,9 @@ import '../utils/session_image.dart';
 import 'player_screen.dart';
 
 class OverviewScreen extends StatefulWidget {
-  const OverviewScreen({super.key});
+  final VoidCallback? onNavigateToPersonal;
+
+  const OverviewScreen({super.key, this.onNavigateToPersonal});
 
   @override
   State<OverviewScreen> createState() => _OverviewScreenState();
@@ -81,12 +83,63 @@ class _OverviewScreenState extends State<OverviewScreen> {
     });
   }
 
-  void _playSession(Session session) {
+  Future<void> _playSession(Session session) async {
+    if (!session.isPersonal) {
+      try {
+        final result = await InternetAddress.lookup('google.com');
+        if (result.isEmpty || result[0].rawAddress.isEmpty) {
+          throw const SocketException('offline');
+        }
+      } on SocketException catch (_) {
+        if (!mounted) return;
+        _showOfflineDialog();
+        return;
+      }
+    }
+
     AudioService.instance.loadSession(session);
+    if (!mounted) return;
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => PlayerScreen(session: session)),
     ).then((_) => _loadHomeData());
+  }
+
+  void _showOfflineDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        final theme = Theme.of(context);
+        return AlertDialog(
+          backgroundColor: theme.colorScheme.surface,
+          title: Text(
+            "You're offline",
+            style: GoogleFonts.montserrat(fontWeight: FontWeight.bold),
+          ),
+          content: Text(
+            "Please check your internet connection to stream online tracks. Would you like to play your downloaded tracks instead?",
+            style: GoogleFonts.inter(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                if (widget.onNavigateToPersonal != null) {
+                  widget.onNavigateToPersonal!();
+                }
+              },
+              child: const Text("Go to Personal Tracks"),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override

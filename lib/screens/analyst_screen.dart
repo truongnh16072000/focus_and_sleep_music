@@ -110,8 +110,6 @@ class _AnalystScreenState extends State<AnalystScreen> {
                             _buildFocusMix(theme),
                             const SizedBox(height: 24),
                             _buildStreakCard(theme),
-                            const SizedBox(height: 24),
-                            _buildInsightCard(theme, days, bestGenre),
                           ],
                         ),
                       ),
@@ -144,8 +142,11 @@ class _AnalystScreenState extends State<AnalystScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: theme.colorScheme.onSurface,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.08),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -155,12 +156,12 @@ class _AnalystScreenState extends State<AnalystScreen> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: theme.scaffoldBackgroundColor.withValues(alpha: 0.16),
+                  color: theme.colorScheme.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(
                   Icons.query_stats_rounded,
-                  color: theme.scaffoldBackgroundColor,
+                  color: theme.colorScheme.primary,
                   size: 22,
                 ),
               ),
@@ -168,7 +169,7 @@ class _AnalystScreenState extends State<AnalystScreen> {
               Text(
                 "THIS WEEK",
                 style: GoogleFonts.inter(
-                  color: theme.scaffoldBackgroundColor.withValues(alpha: 0.68),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                   fontSize: 10,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 1.3,
@@ -180,7 +181,7 @@ class _AnalystScreenState extends State<AnalystScreen> {
           Text(
             hasFocusData ? _formatFocusTime(weekFocusMinutes) : "No focus data",
             style: GoogleFonts.montserrat(
-              color: theme.scaffoldBackgroundColor,
+              color: theme.colorScheme.onSurface,
               fontSize: 34,
               fontWeight: FontWeight.w800,
             ),
@@ -191,7 +192,7 @@ class _AnalystScreenState extends State<AnalystScreen> {
                 ? "$_totalSessions sessions started, $_streakCount day streak"
                 : "Play a focus session for at least one minute to track time.",
             style: GoogleFonts.inter(
-              color: theme.scaffoldBackgroundColor.withValues(alpha: 0.7),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
               fontSize: 13,
               height: 1.35,
             ),
@@ -456,9 +457,13 @@ class _AnalystScreenState extends State<AnalystScreen> {
       return day.isToday ? emptyTodayColor : emptyBarColor;
     }
 
-    return day.isToday
-        ? theme.colorScheme.primary
-        : theme.colorScheme.onSurface.withValues(alpha: 0.28);
+    final isDark = theme.brightness == Brightness.dark;
+
+    if (day.isToday) {
+      return isDark ? const Color(0xFF8DD7CF) : theme.colorScheme.primary;
+    }
+
+    return isDark ? emptyBarColor : theme.colorScheme.onSurface.withValues(alpha: 0.28);
   }
 
   Widget _buildFocusMix(ThemeData theme) {
@@ -579,52 +584,6 @@ class _AnalystScreenState extends State<AnalystScreen> {
     );
   }
 
-  Widget _buildInsightCard(
-    ThemeData theme,
-    List<_DayFocus> days,
-    String bestGenre,
-  ) {
-    final bestDay = days.reduce(
-      (current, next) => next.minutes > current.minutes ? next : current,
-    );
-    final insight = _focusRecords.isEmpty
-        ? "Play a focus track for at least one minute to unlock accurate time charts."
-        : "Your strongest focus day was ${bestDay.label}. $bestGenre is currently your most used mode.";
-
-    return _buildSection(
-      theme,
-      title: "Next action",
-      trailing: "Insight",
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(
-              Icons.auto_awesome_rounded,
-              color: theme.colorScheme.primary,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Text(
-              insight,
-              style: GoogleFonts.inter(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                fontSize: 14,
-                height: 1.45,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildSection(
     ThemeData theme, {
