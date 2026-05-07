@@ -24,18 +24,30 @@ class _PlayerScreenState extends State<PlayerScreen>
   double _stimulationLevel = 0.5;
   bool _isFavorited = false;
   late final VoidCallback _playbackListener;
-  final Stopwatch _visibleFocusStopwatch = Stopwatch();
-  Timer? _visibleFocusTimer;
-  Duration _visibleFocusElapsed = Duration.zero;
-  TimerSettings _timerSettings = TimerSettings();
-  bool _isWorkTime = true;
-  Duration _intervalElapsed = Duration.zero;
+  Duration get _visibleFocusElapsed => AudioService.instance.visibleFocusElapsed.value;
+  set _visibleFocusElapsed(Duration val) => AudioService.instance.visibleFocusElapsed.value = val;
+
+  TimerSettings get _timerSettings => AudioService.instance.timerSettings.value;
+  set _timerSettings(TimerSettings val) => AudioService.instance.timerSettings.value = val;
+
+  bool get _isWorkTime => AudioService.instance.isWorkTime.value;
+  set _isWorkTime(bool val) => AudioService.instance.isWorkTime.value = val;
+
+  Stopwatch get _intervalStopwatch => AudioService.instance.intervalStopwatch;
+  Stopwatch get _visibleFocusStopwatch => AudioService.instance.visibleFocusStopwatch;
+
+  int get _completedIntervals => AudioService.instance.completedIntervals.value;
+  set _completedIntervals(int val) => AudioService.instance.completedIntervals.value = val;
+  Timer? _quoteRotationTimer;
   final List<String> _quotes = [
     "Focus is the art of knowing what to ignore.",
     "Deep work is the superpower of the 21st century.",
     "Your attention is your most valuable asset.",
     "Efficiency is doing things right; effectiveness is doing the right things.",
     "The way to get started is to quit talking and begin doing.",
+    "The secret of getting ahead is getting started.",
+    "Don't watch the clock; do what it does. Keep going.",
+    "It's not about having time, it's about making time.",
   ];
   late String _currentQuote;
 
@@ -50,19 +62,19 @@ class _PlayerScreenState extends State<PlayerScreen>
     )..repeat();
     _playbackListener = _handlePlaybackChanged;
     AudioService.instance.isPlaying.addListener(_playbackListener);
+    AudioService.instance.visibleFocusElapsed.addListener(_onTimerTick);
+    AudioService.instance.onTimerEnd = _handleTimerEnd;
+    AudioService.instance.onIntervalTransition = () {
+      if (mounted) _handleIntervalTransition(AudioService.instance.isWorkTime.value);
+    };
     _handlePlaybackChanged();
     _checkFavoriteStatus();
-    _loadTimerSettings();
   }
 
-  Future<void> _loadTimerSettings() async {
-    final settings = await StorageService.instance.getTimerSettings();
-    if (!mounted) return;
-
-    setState(() {
-      _timerSettings = settings;
-    });
+  void _onTimerTick() {
+    if (mounted) setState(() {});
   }
+
 
   Future<void> _checkFavoriteStatus() async {
     final favorites = await StorageService.instance.getSavedTracks();
@@ -119,7 +131,14 @@ class _PlayerScreenState extends State<PlayerScreen>
   @override
   void dispose() {
     AudioService.instance.isPlaying.removeListener(_playbackListener);
-    _visibleFocusTimer?.cancel();
+    AudioService.instance.visibleFocusElapsed.removeListener(_onTimerTick);
+    if (AudioService.instance.onTimerEnd == _handleTimerEnd) {
+      AudioService.instance.onTimerEnd = null;
+    }
+    if (AudioService.instance.onIntervalTransition != null) {
+      AudioService.instance.onIntervalTransition = null;
+    }
+    _quoteRotationTimer?.cancel();
     _waveController.dispose();
     super.dispose();
   }
@@ -224,29 +243,7 @@ class _PlayerScreenState extends State<PlayerScreen>
             onTap: () => Navigator.pop(context),
             child: Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                    ),
-                  ),
-                  child: Icon(
-                    Icons.track_changes,
-                    size: 14,
-                    color: theme.colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  "Custom Focus Mix",
-                  style: GoogleFonts.inter(
-                    color: theme.colorScheme.onSurface,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                const SizedBox(width: 20),
                 Icon(
                   Icons.keyboard_arrow_down,
                   color: theme.colorScheme.onSurface,
@@ -304,7 +301,7 @@ class _PlayerScreenState extends State<PlayerScreen>
 
     if (_timerSettings.mode == TimerMode.infinite) {
       if (_timerSettings.activateQuotes) {
-        label = "QUOTE";
+        label = "FOCUS";
       } else {
         label = "ELAPSED";
         displayTime = _formatFocusCounter(_visibleFocusElapsed);
@@ -319,16 +316,40 @@ class _PlayerScreenState extends State<PlayerScreen>
       final total = _isWorkTime
           ? Duration(minutes: _timerSettings.workMinutes)
           : Duration(minutes: _timerSettings.restMinutes);
-      final left = total - _intervalElapsed;
+      final elapsed = _intervalStopwatch.elapsed;
+      final left = total - elapsed;
       displayTime = _formatFocusCounter(left.isNegative ? Duration.zero : left);
     }
 
     return Column(
       children: [
+        // Interval counter badge
+        if (_timerSettings.mode == TimerMode.intervals &&
+            _completedIntervals > 0) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              "Interval $_completedIntervals completed",
+              style: GoogleFonts.inter(
+                color: theme.colorScheme.primary,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+        ],
         Text(
           label,
           style: GoogleFonts.inter(
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+            color: _timerSettings.mode == TimerMode.intervals && !_isWorkTime
+                ? theme.colorScheme.tertiary.withValues(alpha: 0.8)
+                : theme.colorScheme.onSurface.withValues(alpha: 0.5),
             fontSize: 12,
             fontWeight: FontWeight.w800,
             letterSpacing: 2,
@@ -339,14 +360,22 @@ class _PlayerScreenState extends State<PlayerScreen>
             _timerSettings.activateQuotes)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 40),
-            child: Text(
-              _currentQuote,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.montserrat(
-                color: theme.colorScheme.onSurface,
-                fontSize: 24,
-                fontWeight: FontWeight.w500,
-                fontStyle: FontStyle.italic,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 600),
+              transitionBuilder: (child, animation) => FadeTransition(
+                opacity: animation,
+                child: child,
+              ),
+              child: Text(
+                _currentQuote,
+                key: ValueKey(_currentQuote),
+                textAlign: TextAlign.center,
+                style: GoogleFonts.montserrat(
+                  color: theme.colorScheme.onSurface,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w500,
+                  fontStyle: FontStyle.italic,
+                ),
               ),
             ),
           )
@@ -354,12 +383,27 @@ class _PlayerScreenState extends State<PlayerScreen>
           Text(
             displayTime,
             style: GoogleFonts.montserrat(
-              color: theme.colorScheme.onSurface,
+              color: _timerSettings.mode == TimerMode.intervals && !_isWorkTime
+                  ? theme.colorScheme.tertiary
+                  : theme.colorScheme.onSurface,
               fontSize: 54,
               fontWeight: FontWeight.w500,
               letterSpacing: -1,
             ),
           ),
+        // Show elapsed time underneath for infinite+quotes mode
+        if (_timerSettings.mode == TimerMode.infinite &&
+            _timerSettings.activateQuotes) ...[
+          const SizedBox(height: 12),
+          Text(
+            _formatFocusCounter(_visibleFocusElapsed),
+            style: GoogleFonts.montserrat(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
         const SizedBox(height: 16),
         GestureDetector(
           onTap: () => _showTimerSettingsSheet(),
@@ -386,8 +430,8 @@ class _PlayerScreenState extends State<PlayerScreen>
                   _timerSettings.mode == TimerMode.infinite
                       ? "Infinite Play"
                       : _timerSettings.mode == TimerMode.intervals
-                      ? "Interval Training"
-                      : "${_timerSettings.timerDurationMinutes} Minutes Timer",
+                      ? "${_timerSettings.workMinutes}m / ${_timerSettings.restMinutes}m Intervals"
+                      : "${_timerSettings.timerDurationMinutes} Min Timer",
                   style: GoogleFonts.inter(
                     color: theme.colorScheme.onSurface,
                     fontSize: 14,
@@ -602,88 +646,59 @@ class _PlayerScreenState extends State<PlayerScreen>
           ],
         ),
         const SizedBox(height: 24),
-        IconButton(
-          icon: Icon(
-            Icons.repeat,
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-            size: 24,
-          ),
-          onPressed: () {},
-        ),
+        
       ],
     );
   }
 
   void _handlePlaybackChanged() {
-    _syncVisibleFocusTimer();
+    if (AudioService.instance.isPlaying.value) {
+      _startQuoteRotationIfNeeded();
+    } else {
+      _quoteRotationTimer?.cancel();
+      _quoteRotationTimer = null;
+    }
+    if (mounted) setState(() {});
   }
 
-  void _syncVisibleFocusTimer() {
-    if (AudioService.instance.isPlaying.value) {
-      if (!_visibleFocusStopwatch.isRunning) {
-        _visibleFocusStopwatch.start();
-      }
-      _visibleFocusTimer ??= Timer.periodic(const Duration(seconds: 1), (_) {
-        if (!mounted) return;
-        _updateTimerLogic();
-      });
-      _updateTimerLogic();
+  void _startQuoteRotationIfNeeded() {
+    if (_timerSettings.mode != TimerMode.infinite ||
+        !_timerSettings.activateQuotes) {
+      _quoteRotationTimer?.cancel();
+      _quoteRotationTimer = null;
       return;
     }
-
-    if (_visibleFocusStopwatch.isRunning) {
-      _visibleFocusStopwatch.stop();
-    }
-    _visibleFocusTimer?.cancel();
-    _visibleFocusTimer = null;
-  }
-
-  void _updateTimerLogic() {
-    setState(() {
-      _visibleFocusElapsed = _visibleFocusStopwatch.elapsed;
-
-      if (_timerSettings.mode == TimerMode.timer) {
-        final totalDuration = Duration(
-          minutes: _timerSettings.timerDurationMinutes,
-        );
-        if (_visibleFocusElapsed >= totalDuration) {
-          _handleTimerEnd();
-        }
-      } else if (_timerSettings.mode == TimerMode.intervals) {
-        _intervalElapsed += const Duration(seconds: 1);
-        final workDuration = Duration(minutes: _timerSettings.workMinutes);
-        final restDuration = Duration(minutes: _timerSettings.restMinutes);
-
-        if (_isWorkTime) {
-          if (_intervalElapsed >= workDuration) {
-            _isWorkTime = false;
-            _intervalElapsed = Duration.zero;
-            _handleIntervalTransition(false); // Switch to rest
-          }
-        } else {
-          if (_intervalElapsed >= restDuration) {
-            _isWorkTime = true;
-            _intervalElapsed = Duration.zero;
-            _handleIntervalTransition(true); // Switch to work
-          }
-        }
-      }
+    _quoteRotationTimer ??=
+        Timer.periodic(const Duration(seconds: 30), (_) {
+      if (!mounted) return;
+      setState(() {
+        String newQuote;
+        do {
+          newQuote = (_quotes..shuffle()).first;
+        } while (newQuote == _currentQuote && _quotes.length > 1);
+        _currentQuote = newQuote;
+      });
     });
   }
 
+
   void _handleTimerEnd() {
     final effect = _timerSettings.timerEffect;
-    _stopPlaybackAndReset();
+    // Save focus time before resetting
+    AudioService.instance.persistFocusTime();
 
     String title = "Focus Session Ended";
-    String message = "Your timer has reached zero.";
+    String message =
+        "You focused for ${_timerSettings.timerDurationMinutes} minutes. Great work!";
     IconData icon = Icons.timer_off_outlined;
 
     if (effect == 'chime') {
-      title = "Time's Up!";
+      title = "Time's Up! 🔔";
+      message =
+          "Your ${_timerSettings.timerDurationMinutes}-minute session is complete.";
       icon = Icons.notifications_active_outlined;
     } else if (effect == 'voice') {
-      title = "Session Complete";
+      title = "Session Complete 🎉";
       message = "Great job! You've finished your focus session.";
       icon = Icons.record_voice_over_outlined;
     }
@@ -694,45 +709,60 @@ class _PlayerScreenState extends State<PlayerScreen>
   }
 
   void _handleIntervalTransition(bool isToWork) {
-    final sound = _timerSettings.intervalSound;
-    // For now we just show a snackbar as sound feedback placeholder
     if (mounted) {
       final theme = Theme.of(context);
+      ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
             children: [
               Icon(
                 isToWork ? Icons.work_outline : Icons.coffee_outlined,
-                color: theme.colorScheme.onPrimaryContainer,
+                color: isToWork
+                    ? theme.colorScheme.onPrimaryContainer
+                    : theme.colorScheme.onTertiaryContainer,
+                size: 22,
               ),
               const SizedBox(width: 12),
-              Text(
-                isToWork ? "Time to Work!" : "Take a Break!",
-                style: TextStyle(
-                  color: theme.colorScheme.onPrimaryContainer,
-                  fontWeight: FontWeight.bold,
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isToWork ? "Time to Focus! 💪" : "Take a Break ☕",
+                      style: TextStyle(
+                        color: isToWork
+                            ? theme.colorScheme.onPrimaryContainer
+                            : theme.colorScheme.onTertiaryContainer,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    Text(
+                      isToWork
+                          ? "${_timerSettings.workMinutes} min work session starting"
+                          : "${_timerSettings.restMinutes} min break • Music paused",
+                      style: TextStyle(
+                        color: (isToWork
+                                ? theme.colorScheme.onPrimaryContainer
+                                : theme.colorScheme.onTertiaryContainer)
+                            .withValues(alpha: 0.7),
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              if (sound != 'none') ...[
-                const Spacer(),
-                Text(
-                  "(${sound.toUpperCase()})",
-                  style: TextStyle(
-                    color: theme.colorScheme.onPrimaryContainer.withValues(
-                      alpha: 0.5,
-                    ),
-                    fontSize: 10,
-                  ),
-                ),
-              ],
             ],
           ),
-          backgroundColor: theme.colorScheme.primaryContainer,
+          backgroundColor: isToWork
+              ? theme.colorScheme.primaryContainer
+              : theme.colorScheme.tertiaryContainer,
           behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 3),
+          duration: const Duration(seconds: 4),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
           ),
           margin: const EdgeInsets.all(16),
         ),
@@ -743,6 +773,7 @@ class _PlayerScreenState extends State<PlayerScreen>
   void _showEndSessionDialog(String title, String message, IconData icon) {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) {
         final theme = Theme.of(context);
         return AlertDialog(
@@ -770,6 +801,7 @@ class _PlayerScreenState extends State<PlayerScreen>
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(context);
+                AudioService.instance.resetTimer();
                 AudioService.instance.togglePlay();
               },
               style: ElevatedButton.styleFrom(
@@ -787,20 +819,13 @@ class _PlayerScreenState extends State<PlayerScreen>
     );
   }
 
-  void _stopPlaybackAndReset() {
-    AudioService.instance.pause();
-    _visibleFocusStopwatch.stop();
-    _visibleFocusStopwatch.reset();
-    _visibleFocusElapsed = Duration.zero;
-    _intervalElapsed = Duration.zero;
-    _isWorkTime = true;
-  }
 
   String _formatFocusCounter(Duration d) {
     String twoDigits(int n) => n.toString().padLeft(2, "0");
     final hours = twoDigits(d.inHours);
+    final minutes = twoDigits(d.inMinutes.remainder(60));
     final seconds = twoDigits(d.inSeconds.remainder(60));
-    return "$hours:$seconds";
+    return "$hours:$minutes:$seconds";
   }
 
   Future<void> _showTimerSettingsSheet() async {
@@ -923,19 +948,25 @@ class _PlayerScreenState extends State<PlayerScreen>
                             _buildInfiniteModeSettings(
                               theme,
                               tempSettings,
-                              setSheetState,
+                              (updated) => setSheetState(
+                                () => tempSettings = updated,
+                              ),
                             ),
                           if (tempSettings.mode == TimerMode.timer)
                             _buildTimerModeSettings(
                               theme,
                               tempSettings,
-                              setSheetState,
+                              (updated) => setSheetState(
+                                () => tempSettings = updated,
+                              ),
                             ),
                           if (tempSettings.mode == TimerMode.intervals)
                             _buildIntervalsModeSettings(
                               theme,
                               tempSettings,
-                              setSheetState,
+                              (updated) => setSheetState(
+                                () => tempSettings = updated,
+                              ),
                             ),
                         ],
                       ),
@@ -956,9 +987,12 @@ class _PlayerScreenState extends State<PlayerScreen>
                               _timerSettings = tempSettings;
                               _visibleFocusStopwatch.reset();
                               _visibleFocusElapsed = Duration.zero;
-                              _intervalElapsed = Duration.zero;
+                              _intervalStopwatch.reset();
+                              _completedIntervals = 0;
                               _isWorkTime = true;
                               _currentQuote = (_quotes..shuffle()).first;
+                              _quoteRotationTimer?.cancel();
+                              _quoteRotationTimer = null;
                             });
                             if (context.mounted) Navigator.pop(context);
                           },
@@ -1067,7 +1101,7 @@ class _PlayerScreenState extends State<PlayerScreen>
   Widget _buildInfiniteModeSettings(
     ThemeData theme,
     TimerSettings settings,
-    StateSetter setSheetState,
+    ValueChanged<TimerSettings> onUpdate,
   ) {
     return Column(
       children: [
@@ -1115,10 +1149,10 @@ class _PlayerScreenState extends State<PlayerScreen>
             ),
             Switch(
               value: settings.activateQuotes,
-              onChanged: (val) => setSheetState(
-                () => settings = settings.copyWith(activateQuotes: val),
+              onChanged: (val) => onUpdate(
+                settings.copyWith(activateQuotes: val),
               ),
-              activeColor: theme.colorScheme.primary,
+              activeThumbColor: theme.colorScheme.primary,
             ),
           ],
         ),
@@ -1129,9 +1163,10 @@ class _PlayerScreenState extends State<PlayerScreen>
   Widget _buildTimerModeSettings(
     ThemeData theme,
     TimerSettings settings,
-    StateSetter setSheetState,
+    ValueChanged<TimerSettings> onUpdate,
   ) {
-    final durations = [90, 60, 120];
+    final durations = [15, 30, 45, 60, 90, 120];
+    final isCustom = !durations.contains(settings.timerDurationMinutes);
     return Column(
       children: [
         Text(
@@ -1151,103 +1186,137 @@ class _PlayerScreenState extends State<PlayerScreen>
             color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
-        const SizedBox(height: 40),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        const SizedBox(height: 32),
+        // Preset duration chips
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          alignment: WrapAlignment.center,
           children: durations.map((d) {
-            final isActive = settings.timerDurationMinutes == d;
-            return Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                child: GestureDetector(
-                  onTap: () => setSheetState(
-                    () => settings = settings.copyWith(timerDurationMinutes: d),
+            final isActive = settings.timerDurationMinutes == d && !isCustom;
+            return GestureDetector(
+              onTap: () => onUpdate(
+                settings.copyWith(timerDurationMinutes: d),
+              ),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 12,
+                  horizontal: 20,
+                ),
+                decoration: BoxDecoration(
+                  color: isActive
+                      ? theme.colorScheme.onSurface.withValues(alpha: 0.12)
+                      : theme.colorScheme.onSurface.withValues(alpha: 0.03),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isActive
+                        ? theme.colorScheme.onSurface
+                        : theme.colorScheme.onSurface.withValues(alpha: 0.1),
+                    width: isActive ? 2 : 1,
                   ),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    decoration: BoxDecoration(
-                      color: isActive
-                          ? Colors.transparent
-                          : theme.colorScheme.onSurface.withValues(alpha: 0.03),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isActive
-                            ? theme.colorScheme.onSurface
-                            : theme.colorScheme.onSurface.withValues(
-                                alpha: 0.1,
-                              ),
-                        width: isActive ? 2 : 1,
-                      ),
-                    ),
-                    child: Center(
-                      child: Text(
-                        "$d minutes",
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: isActive
-                              ? FontWeight.bold
-                              : FontWeight.w500,
-                          color: theme.colorScheme.onSurface,
-                        ),
-                      ),
-                    ),
+                ),
+                child: Text(
+                  "$d min",
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+                    color: theme.colorScheme.onSurface,
                   ),
                 ),
               ),
             );
           }).toList(),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 24),
+        // Custom slider
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: theme.colorScheme.onSurface.withValues(alpha: 0.03),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
             ),
           ),
-          child: Row(
+          child: Column(
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Custom",
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Custom Duration",
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      "${settings.timerDurationMinutes} min",
+                      style: GoogleFonts.montserrat(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
                         color: theme.colorScheme.onSurface,
                       ),
                     ),
-                    Text(
-                      "Enter specific duration",
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: theme.colorScheme.onSurface.withValues(
-                          alpha: 0.5,
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              SliderTheme(
+                data: SliderThemeData(
+                  activeTrackColor: theme.colorScheme.onSurface,
+                  inactiveTrackColor:
+                      theme.colorScheme.onSurface.withValues(alpha: 0.1),
+                  thumbColor: theme.colorScheme.onSurface,
+                  overlayColor:
+                      theme.colorScheme.onSurface.withValues(alpha: 0.08),
+                  trackHeight: 3,
+                  thumbShape:
+                      const RoundSliderThumbShape(enabledThumbRadius: 7),
+                ),
+                child: Slider(
+                  min: 5,
+                  max: 180,
+                  divisions: 35,
+                  value: settings.timerDurationMinutes.toDouble().clamp(5, 180),
+                  onChanged: (val) => onUpdate(
+                    settings.copyWith(timerDurationMinutes: val.round()),
+                  ),
                 ),
               ),
-              Container(
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    _buildUnitTab(theme, "min", true),
-                    _buildUnitTab(theme, "hr", false),
-                  ],
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "5 min",
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                    ),
+                  ),
+                  Text(
+                    "3 hours",
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
         ),
-        const SizedBox(height: 40),
+        const SizedBox(height: 32),
         Align(
           alignment: Alignment.centerLeft,
           child: Text(
@@ -1265,11 +1334,7 @@ class _PlayerScreenState extends State<PlayerScreen>
           "Stop Music",
           Icons.stop_circle_outlined,
           settings.timerEffect == 'stop',
-          () {
-            setSheetState(
-              () => settings = settings.copyWith(timerEffect: 'stop'),
-            );
-          },
+          () => onUpdate(settings.copyWith(timerEffect: 'stop')),
         ),
         const SizedBox(height: 12),
         Row(
@@ -1280,11 +1345,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                 "Chime",
                 Icons.notifications_active_outlined,
                 settings.timerEffect == 'chime',
-                () {
-                  setSheetState(
-                    () => settings = settings.copyWith(timerEffect: 'chime'),
-                  );
-                },
+                () => onUpdate(settings.copyWith(timerEffect: 'chime')),
               ),
             ),
             const SizedBox(width: 16),
@@ -1294,11 +1355,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                 "Voice",
                 Icons.record_voice_over_outlined,
                 settings.timerEffect == 'voice',
-                () {
-                  setSheetState(
-                    () => settings = settings.copyWith(timerEffect: 'voice'),
-                  );
-                },
+                () => onUpdate(settings.copyWith(timerEffect: 'voice')),
               ),
             ),
           ],
@@ -1307,81 +1364,11 @@ class _PlayerScreenState extends State<PlayerScreen>
     );
   }
 
-  Widget _buildEffectOption(
-    ThemeData theme,
-    String label,
-    IconData icon,
-    bool isActive,
-    VoidCallback onTap,
-  ) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isActive
-              ? Colors.transparent
-              : theme.colorScheme.onSurface.withValues(alpha: 0.03),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isActive
-                ? theme.colorScheme.onSurface
-                : theme.colorScheme.onSurface.withValues(alpha: 0.1),
-            width: isActive ? 2 : 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: theme.colorScheme.onSurface, size: 24),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                label,
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-                  color: theme.colorScheme.onSurface,
-                ),
-              ),
-            ),
-            if (isActive)
-              Icon(
-                Icons.check_circle,
-                color: theme.colorScheme.onSurface,
-                size: 20,
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildUnitTab(ThemeData theme, String label, bool isActive) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: isActive
-            ? theme.colorScheme.onSurface.withValues(alpha: 0.15)
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        label,
-        style: GoogleFonts.inter(
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-          color: theme.colorScheme.onSurface.withValues(
-            alpha: isActive ? 1.0 : 0.5,
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _buildIntervalsModeSettings(
     ThemeData theme,
     TimerSettings settings,
-    StateSetter setSheetState,
+    ValueChanged<TimerSettings> onUpdate,
   ) {
     return Column(
       children: [
@@ -1406,18 +1393,30 @@ class _PlayerScreenState extends State<PlayerScreen>
         Row(
           children: [
             Expanded(
-              child: _buildTimePicker(
+              child: _buildInteractiveTimePicker(
                 theme,
                 "Work Time",
-                "${settings.workMinutes} minutes",
+                settings.workMinutes,
+                (val) => onUpdate(
+                  settings.copyWith(workMinutes: val),
+                ),
+                minVal: 5,
+                maxVal: 120,
+                step: 5,
               ),
             ),
             const SizedBox(width: 24),
             Expanded(
-              child: _buildTimePicker(
+              child: _buildInteractiveTimePicker(
                 theme,
                 "Rest Time",
-                "${settings.restMinutes} minutes",
+                settings.restMinutes,
+                (val) => onUpdate(
+                  settings.copyWith(restMinutes: val),
+                ),
+                minVal: 1,
+                maxVal: 30,
+                step: 1,
               ),
             ),
           ],
@@ -1443,11 +1442,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                 "Voice",
                 Icons.play_circle_filled,
                 settings.intervalSound == 'voice',
-                () {
-                  setSheetState(
-                    () => settings = settings.copyWith(intervalSound: 'voice'),
-                  );
-                },
+                () => onUpdate(settings.copyWith(intervalSound: 'voice')),
               ),
             ),
             const SizedBox(width: 16),
@@ -1457,11 +1452,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                 "Chime",
                 Icons.play_circle_filled,
                 settings.intervalSound == 'chime',
-                () {
-                  setSheetState(
-                    () => settings = settings.copyWith(intervalSound: 'chime'),
-                  );
-                },
+                () => onUpdate(settings.copyWith(intervalSound: 'chime')),
               ),
             ),
           ],
@@ -1470,62 +1461,77 @@ class _PlayerScreenState extends State<PlayerScreen>
     );
   }
 
-  Widget _buildTimePicker(ThemeData theme, String label, String value) {
+  Widget _buildInteractiveTimePicker(
+    ThemeData theme,
+    String label,
+    int currentMinutes,
+    ValueChanged<int> onChanged, {
+    int minVal = 1,
+    int maxVal = 120,
+    int step = 5,
+  }) {
     return Column(
       children: [
         Text(
           label,
           style: GoogleFonts.inter(
             fontSize: 14,
+            fontWeight: FontWeight.w600,
             color: theme.colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 16),
-        Text(
-          "23 minutes",
-          style: GoogleFonts.inter(
-            fontSize: 14,
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+        // Up arrow
+        GestureDetector(
+          onTap: () {
+            if (currentMinutes + step <= maxVal) {
+              onChanged(currentMinutes + step);
+            }
+          },
+          child: Icon(
+            Icons.keyboard_arrow_up_rounded,
+            size: 32,
+            color: currentMinutes + step <= maxVal
+                ? theme.colorScheme.onSurface
+                : theme.colorScheme.onSurface.withValues(alpha: 0.2),
           ),
         ),
-        const SizedBox(height: 8),
-        Text(
-          "24 minutes",
-          style: GoogleFonts.inter(
-            fontSize: 14,
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-          ),
-        ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
+        // Current value
         Container(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
           decoration: BoxDecoration(
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
-            borderRadius: BorderRadius.circular(12),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.15),
+            ),
           ),
           child: Text(
-            value,
-            style: GoogleFonts.inter(
-              fontSize: 16,
+            "$currentMinutes min",
+            textAlign: TextAlign.center,
+            style: GoogleFonts.montserrat(
+              fontSize: 22,
               fontWeight: FontWeight.bold,
               color: theme.colorScheme.onSurface,
             ),
           ),
         ),
-        const SizedBox(height: 8),
-        Text(
-          "26 minutes",
-          style: GoogleFonts.inter(
-            fontSize: 14,
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          "27 minutes",
-          style: GoogleFonts.inter(
-            fontSize: 14,
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+        const SizedBox(height: 4),
+        // Down arrow
+        GestureDetector(
+          onTap: () {
+            if (currentMinutes - step >= minVal) {
+              onChanged(currentMinutes - step);
+            }
+          },
+          child: Icon(
+            Icons.keyboard_arrow_down_rounded,
+            size: 32,
+            color: currentMinutes - step >= minVal
+                ? theme.colorScheme.onSurface
+                : theme.colorScheme.onSurface.withValues(alpha: 0.2),
           ),
         ),
       ],
@@ -1594,6 +1600,55 @@ class _PlayerScreenState extends State<PlayerScreen>
                     )
                   : null,
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEffectOption(
+    ThemeData theme,
+    String label,
+    IconData icon,
+    bool isActive,
+    VoidCallback onTap,
+  ) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isActive
+              ? Colors.transparent
+              : theme.colorScheme.onSurface.withValues(alpha: 0.03),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isActive
+                ? theme.colorScheme.onSurface
+                : theme.colorScheme.onSurface.withValues(alpha: 0.1),
+            width: isActive ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: theme.colorScheme.onSurface, size: 24),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+            ),
+            if (isActive)
+              Icon(
+                Icons.check_circle,
+                color: theme.colorScheme.onSurface,
+                size: 20,
+              ),
           ],
         ),
       ),

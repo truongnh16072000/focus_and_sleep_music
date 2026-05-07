@@ -25,6 +25,23 @@ class AudioService {
   final ValueNotifier<int> queueIndex = ValueNotifier(-1);
   final ValueNotifier<bool> hasActiveSession = ValueNotifier(false);
 
+  // Focus timer state for mini player display
+  final ValueNotifier<String> focusTimerLabel = ValueNotifier('');
+  final ValueNotifier<String> focusTimerMode = ValueNotifier('');
+  final ValueNotifier<bool> focusIsRestPhase = ValueNotifier(false);
+
+  // Core timer state
+  final ValueNotifier<TimerSettings> timerSettings = ValueNotifier(TimerSettings());
+  final ValueNotifier<Duration> visibleFocusElapsed = ValueNotifier(Duration.zero);
+  final ValueNotifier<Duration> intervalElapsed = ValueNotifier(Duration.zero);
+  final ValueNotifier<bool> isWorkTime = ValueNotifier(true);
+  final ValueNotifier<int> completedIntervals = ValueNotifier(0);
+  
+  final Stopwatch visibleFocusStopwatch = Stopwatch();
+  final Stopwatch intervalStopwatch = Stopwatch();
+  Timer? visibleFocusTimer;
+  Timer? quoteRotationTimer;
+  String currentQuote = "";
   bool _isInitialized = false;
   Session? _pendingSession;
   final Stopwatch _focusStopwatch = Stopwatch();
@@ -38,9 +55,12 @@ class AudioService {
     final session = await AudioSession.instance;
     await session.configure(const AudioSessionConfiguration.music());
 
+    timerSettings.value = await StorageService.instance.getTimerSettings();
+
     _player.playingStream.listen((playing) {
       isPlaying.value = playing;
       _handlePlaybackTracking(playing);
+      syncVisibleFocusTimer();
     });
 
     _player.positionStream.listen((p) {
@@ -325,6 +345,150 @@ class AudioService {
     _accumulatedFocusTime = Duration.zero;
     _trackedFocusSession = null;
     _focusStartedAt = null;
+  }
+
+  // --- Timer UI State Management ---
+  VoidCallback? onTimerEnd;
+  VoidCallback? onIntervalTransition;
+
+  void syncVisibleFocusTimer() {
+    if (isPlaying.value) {
+      if (!visibleFocusStopwatch.isRunning) {
+        visibleFocusStopwatch.start();
+      }
+      if (timerSettings.value.mode == TimerMode.intervals) {
+        if (!intervalStopwatch.isRunning) {
+          intervalStopwatch.start();
+        }
+      }
+      visibleFocusTimer ??= Timer.periodic(const Duration(seconds: 1), (_) {
+        _updateTimerLogic();
+      });
+      _updateTimerLogic();
+    } else {
+      if (visibleFocusStopwatch.isRunning) {
+        visibleFocusStopwatch.stop();
+      }
+      if (intervalStopwatch.isRunning) {
+        intervalStopwatch.stop();
+      }
+      visibleFocusTimer?.cancel();
+      visibleFocusTimer = null;
+    }
+  }
+
+  void _updateTimerLogic() {
+    visibleFocusElapsed.value = visibleFocusStopwatch.elapsed;
+    _publishTimerState();
+
+    if (timerSettings.value.mode == TimerMode.timer) {
+      final totalDuration = Duration(minutes: timerSettings.value.timerDurationMinutes);
+      if (visibleFocusElapsed.value >= totalDuration) {
+        _handleTimerEnd();
+      }
+    } else if (timerSettings.value.mode == TimerMode.intervals) {
+      final currentPhaseDuration = isWorkTime.value
+          ? Duration(minutes: timerSettings.value.workMinutes)
+          : Duration(minutes: timerSettings.value.restMinutes);
+
+      if (intervalStopwatch.elapsed >= currentPhaseDuration) {
+        intervalStopwatch
+          ..stop()
+          ..reset();
+
+        if (isWorkTime.value) {
+          completedIntervals.value++;
+          isWorkTime.value = false;
+          pause();
+          onIntervalTransition?.call();
+          _startRestTimer();
+        } else {
+          isWorkTime.value = true;
+          onIntervalTransition?.call();
+          intervalStopwatch.start();
+          togglePlay();
+        }
+      }
+    }
+  }
+
+  void _startRestTimer() {
+    intervalStopwatch.start();
+    visibleFocusTimer?.cancel();
+    visibleFocusTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      final restDuration = Duration(minutes: timerSettings.value.restMinutes);
+      _publishTimerState();
+      if (intervalStopwatch.elapsed >= restDuration) {
+        intervalStopwatch
+          ..stop()
+          ..reset();
+        isWorkTime.value = true;
+        onIntervalTransition?.call();
+        togglePlay();
+        visibleFocusTimer?.cancel();
+        visibleFocusTimer = null;
+      }
+    });
+  }
+
+  void _handleTimerEnd() {
+    pause();
+    visibleFocusStopwatch.stop();
+    visibleFocusStopwatch.reset();
+    visibleFocusElapsed.value = Duration.zero;
+    intervalStopwatch.stop();
+    intervalStopwatch.reset();
+    isWorkTime.value = true;
+    visibleFocusTimer?.cancel();
+    visibleFocusTimer = null;
+    _publishTimerState();
+    onTimerEnd?.call();
+  }
+
+  void resetTimer() {
+    visibleFocusStopwatch.stop();
+    visibleFocusStopwatch.reset();
+    visibleFocusElapsed.value = Duration.zero;
+    intervalStopwatch.stop();
+    intervalStopwatch.reset();
+    completedIntervals.value = 0;
+    isWorkTime.value = true;
+    _publishTimerState();
+  }
+
+  void _publishTimerState() {
+    switch (timerSettings.value.mode) {
+      case TimerMode.infinite:
+        focusTimerMode.value = '∞';
+        focusTimerLabel.value = _formatFocusCounter(visibleFocusElapsed.value);
+        focusIsRestPhase.value = false;
+      case TimerMode.timer:
+        final remaining = Duration(
+              minutes: timerSettings.value.timerDurationMinutes,
+            ) -
+            visibleFocusElapsed.value;
+        final clamped = remaining.isNegative ? Duration.zero : remaining;
+        focusTimerMode.value = '⏱';
+        focusTimerLabel.value = _formatFocusCounter(clamped);
+        focusIsRestPhase.value = false;
+      case TimerMode.intervals:
+        final phaseDuration = isWorkTime.value
+            ? Duration(minutes: timerSettings.value.workMinutes)
+            : Duration(minutes: timerSettings.value.restMinutes);
+        final remaining = phaseDuration - intervalStopwatch.elapsed;
+        final clamped = remaining.isNegative ? Duration.zero : remaining;
+        focusTimerMode.value = isWorkTime.value ? '🔄 Work' : '☕ Rest';
+        focusTimerLabel.value = _formatFocusCounter(clamped);
+        focusIsRestPhase.value = !isWorkTime.value;
+    }
+  }
+
+  String _formatFocusCounter(Duration d) {
+    String twoDigits(int n) => n.toString().padLeft(2, "0");
+    final hours = twoDigits(d.inHours);
+    final minutes = twoDigits(d.inMinutes.remainder(60));
+    final seconds = twoDigits(d.inSeconds.remainder(60));
+    return "$hours:$minutes:$seconds";
   }
 
   Future<void> dispose() async {

@@ -83,10 +83,6 @@ flutter:
     - assets/images/sleep.png
     - assets/images/meditate.png
     - assets/icon/app_icon.png
-    - assets/audio/creative/
-    - assets/audio/deepwork/
-    - assets/audio/study/
-    - assets/audio/coding/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

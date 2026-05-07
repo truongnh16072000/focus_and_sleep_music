@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import '../models/session.dart';
@@ -31,7 +30,6 @@ class _MainNavigationState extends State<MainNavigation> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       body: IndexedStack(index: _currentIndex, children: _screens),
@@ -248,7 +246,7 @@ class _MiniMusicBar extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                _buildDurationPill(theme),
+                _buildTimerPill(theme),
                 const SizedBox(width: 8),
                 ValueListenableBuilder<bool>(
                   valueListenable: AudioService.instance.isBuffering,
@@ -287,45 +285,67 @@ class _MiniMusicBar extends StatelessWidget {
     );
   }
 
-  Widget _buildDurationPill(ThemeData theme) {
-    return ValueListenableBuilder<Duration>(
-      valueListenable: AudioService.instance.position,
-      builder: (context, position, _) {
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.all_inclusive_rounded,
-                size: 14,
-                color: Colors.white70,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                _formatDuration(position),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  fontFeatures: [FontFeature.tabularFigures()],
-                ),
-              ),
-            ],
-          ),
+  Widget _buildTimerPill(ThemeData theme) {
+    return ValueListenableBuilder<String>(
+      valueListenable: AudioService.instance.focusTimerLabel,
+      builder: (context, timerLabel, _) {
+        return ValueListenableBuilder<String>(
+          valueListenable: AudioService.instance.focusTimerMode,
+          builder: (context, timerMode, _) {
+            return ValueListenableBuilder<bool>(
+              valueListenable: AudioService.instance.focusIsRestPhase,
+              builder: (context, isRest, _) {
+                final displayLabel =
+                    timerLabel.isNotEmpty ? timerLabel : '00:00:00';
+                final displayMode =
+                    timerMode.isNotEmpty ? timerMode : '∞';
+
+                return Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: isRest
+                        ? const Color(0xFF8B6914).withValues(alpha: 0.3)
+                        : Colors.black.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(12),
+                    border: isRest
+                        ? Border.all(
+                            color: const Color(0xFFD4A017).withValues(alpha: 0.4),
+                            width: 1,
+                          )
+                        : null,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        displayMode,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Colors.white70,
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        displayLabel,
+                        style: TextStyle(
+                          color: isRest
+                              ? const Color(0xFFFFD54F)
+                              : Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
         );
       },
     );
-  }
-
-  String _formatDuration(Duration duration) {
-    final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return '$minutes:$seconds';
   }
 }
 
